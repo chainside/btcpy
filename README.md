@@ -1,5 +1,5 @@
-<p style="text-align:center;">
-<img src="https://www.chainside.net/images/logo.png" alt="chainside" width="80" style="margin: 0 0;"> 
+<p>
+<img src="https://www.chainside.net/images/logo.png" alt="chainside" width="80"> 
 <br \><br \>
 developed with :heart: by <a href="https://www.chainside.net">chainside</a>
 </p>
@@ -31,7 +31,7 @@ validation.
 # Installation
 To install this library one can just run
 
-    pip install btcpy
+    pip install chainside-btcpy
 
 # What it does
 The main functionalities provided by this project are the following.
