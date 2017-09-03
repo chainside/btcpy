@@ -71,8 +71,8 @@ The first thing to do the first time this package is imported is to set the
 network on which it has to work. This is achieved by doing:
 
 ```python
-import btcpy
-btcpy.setup('regtest')
+from btcpy.setup import setup
+setup('regtest')
 ```
     
 supported network types are:
