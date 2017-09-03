@@ -2,3 +2,6 @@
 */__pycache__/
 *.pyc
 *.sw[op]
+dist/
+build/
+*.egg-info/
