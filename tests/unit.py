@@ -9,6 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE.md file.
 
+
 import unittest
 from unittest.mock import patch
 
@@ -1000,7 +1001,9 @@ scripts = {'p2sh': {'hex': 'a914ed4a0e1af5316666499ec6f8a5a99bf4abaf754987',
                       'code': 'P2wpkhV0Script(bytearray(unhexlify("f81b6a6cfaaf19dbd9e56b9cab2d8a457608ad8e")))',
                       'type': 'p2wpkh'},
            'p2wsh': {'hex': '0020cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70',
-                     'asm': '0 cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70'}}
+                     'asm': '0 cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70',
+                     'code': 'P2wshV0Script(bytearray(unhexlify("cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70")))',
+                     'type': 'p2wsh'}}
 
 
 # This automatically tests for equality between all the raw transactions in `transactions`
