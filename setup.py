@@ -14,6 +14,12 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='btcpy',
-      version='1.0',
+      version='0.1',
       packages=find_packages(),
-      install_requires=['ecdsa', 'base58', 'python-bitcoinlib==0.7.0'])
+      install_requires=['ecdsa', 'base58', 'python-bitcoinlib==0.7.0'],
+      description='A Python3 SegWit-compliant library which provides tools to handle Bitcoin data structures in a simple fashion.',
+      author='chainside srl',
+      author_email='simone.bronzini@chainside.net',
+      url='https://github.com/chainside/btcpy',
+      download_url='https://github.com/chainside/btcpy/archive/0.1.tar.gz',
+      keywords=['bitcoin', 'blockchain', 'bitcoind'])
