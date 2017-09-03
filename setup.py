@@ -22,4 +22,5 @@ setup(name='chainside-btcpy',
       author_email='simone.bronzini@chainside.net',
       url='https://github.com/chainside/btcpy',
       download_url='https://github.com/chainside/btcpy/archive/0.1.tar.gz',
+      python_requires='>=3',
       keywords=['bitcoin', 'blockchain', 'bitcoind', 'chainside'])
