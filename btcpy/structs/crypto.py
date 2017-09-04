@@ -11,8 +11,10 @@
 
 from binascii import hexlify, unhexlify
 from base58 import b58decode_check
+from hashlib import sha256
 from ecdsa import SigningKey, SECP256k1
 from ecdsa.util import sigencode_der
+from functools import partial
 
 from ..lib.types import HexSerializable
 from ..lib.codecs import Base58Codec
@@ -55,9 +57,10 @@ class PrivateKey(HexSerializable):
     def serialize(self):
         return self.key
 
-    def raw_sign(self, data):
+    def raw_sign(self, data, deterministic=True):
         sig_key = SigningKey.from_string(self.key, curve=SECP256k1)
-        r, s, order = sig_key.sign_digest(data, sigencode=lambda *x: x)
+        sig_func = partial(sig_key.sign_digest_deterministic, hashfunc=sha256) if deterministic else sig_key.sign_digest
+        r, s, order = sig_func(data, sigencode=lambda *x: x)
         if s < 0x01:
             raise ValueError('Too low s value for signature: {}'.format(s))
         # ref: https://github.com/bitcoin/bips/blob/master/bip-0062.mediawiki#Low_S_values_in_signatures
@@ -69,8 +72,8 @@ class PrivateKey(HexSerializable):
             r = int.from_bytes(b'\x00' + r.to_bytes(32, 'big'), 'big')
         return r, s, order
 
-    def sign(self, data):
-        return sigencode_der(*self.raw_sign(data))
+    def sign(self, data, deterministic=True):
+        return sigencode_der(*self.raw_sign(data, deterministic))
 
     def __eq__(self, other):
         return self.key == other.key
