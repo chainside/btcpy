@@ -622,13 +622,13 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
                                         self.outs,
                                         self.locktime)
 
-    def get_digest(self, index, prev_script, sighash):
+    def get_digest(self, index, prev_script, sighash=Sighash('ALL')):
         return self.transaction.get_digest(index, prev_script, sighash)
     
-    def get_segwit_digest(self, index, prev_script, prev_amount, sighash):
+    def get_segwit_digest(self, index, prev_script, prev_amount, sighash=Sighash('ALL')):
         return self._get_segwit_digest_preimage(index, prev_script, prev_amount, sighash).hash()
 
-    def _get_segwit_digest_preimage(self, index, prev_script, prev_amount, sighash):
+    def _get_segwit_digest_preimage(self, index, prev_script, prev_amount, sighash=Sighash('ALL')):
         
         # TODO reinsert partial caching to avoid quadratic hashing
         
