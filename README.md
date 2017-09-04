@@ -14,6 +14,36 @@ Bitcoin scripts.
 **N.B.: this library is a work in progress so it is highly discouraged to use it in
 a production environment**
 
+Table of Contents
+=================
+
+   * [btcpy](#btcpy)
+   * [Requirements](#requirements)
+   * [Installation](#installation)
+   * [What it does](#what-it-does)
+   * [What it does not do](#what-it-does-not-do)
+   * [Structure](#structure)
+   * [Usage examples](#usage-examples)
+      * [Network setup](#network-setup)
+      * [Parsing and serialization](#parsing-and-serialization)
+      * [Keys and addresses](#keys-and-addresses)
+      * [Scripts](#scripts)
+         * [Low-level scripting functionalities](#low-level-scripting-functionalities)
+      * [Transactions](#transactions)
+         * [Creating transactions](#creating-transactions)
+         * [Spending a transaction](#spending-a-transaction)
+         * [P2PKH](#p2pkh)
+         * [P2SH](#p2sh)
+         * [P2WSH](#p2wsh)
+         * [P2WSH-over-P2SH](#p2wsh-over-p2sh)
+         * [P2PK](#p2pk)
+         * [Multisig](#multisig)
+         * [Timelocks, Hashlocks, IfElse](#timelocks-hashlocks-ifelse)
+         * [Low-level signing](#low-level-signing)
+         * [Contributing](#contributing)
+   * [TODO](#todo)
+
+
 # Requirements
 The strict requirements of this library are:
 
@@ -384,7 +414,7 @@ parameters:
 | `P2pkScript`                  | A P2PK script | A `PublicKey` |
 | `NulldataScript`              | An OP_RETURN script | A `StackData` representing the data to store in the transaction |
 | `MultisigScript`              | A multisig script, where m out of n keys are needed to spend | `m`, the number of signatures needed to spend this output, an arbitrary number of `PublicKeys`, `n` the number of public keys provided |
-| `IfElseScriptpt`              | A script consisting of an `OP_IF`, a script, an `OP_ELSE`, another script and an `OP_ENDIF` | Two `ScriptPubKey` scripts, the first to be executed in the if branch, the second to be executed in the else branch |
+| `IfElseScript`              | A script consisting of an `OP_IF`, a script, an `OP_ELSE`, another script and an `OP_ENDIF` | Two `ScriptPubKey` scripts, the first to be executed in the if branch, the second to be executed in the else branch |
 | `TimelockScript`              | A script consisting of `<pushdata> OP_CHECKLOCKTIMEVERIFY OP_DROP` and a subsequent script which can be spent only after the absolute time expressed by the `<pushdata>` is expired | A `Locktime`, expressing the absolute time/number of blocks after which the subsequent script can be spent, and the locked `ScriptPubKey` |
 | `RelativeTimelockScript`      | A script consisting of `<pushdata> OP_CHECKSEQUENCEVERIFY OP_DROP` and a subsequent script which can be spent only after the relative time time expressed by the `<pushdata>` is expired | A `Sequence`, expressing the relative time/ number of blocks after which the subsequent script can be spent, and the locked `ScriptPubKey` |
 | `Hashlock256Script`           | A script consisting of `OP_HASH256 <pushdata> OP_EQUALVERIFY` and a subsequent script which can be spent only after providing the preimage of `<pushdata>` for the double SHA256 hash function | Either a `bytearray` or `StackData` representing the hashed value that locks the subsequent script, plus the locked `ScriptPubKey` |
@@ -436,7 +466,7 @@ for example:
 ```python
 >>> to_spend = Transaction.unhexlify('...')
 >>> unsigned = MutableTransction(version=1,
-...                              ins=[TxIn(txid=to_spend,
+...                              ins=[TxIn(txid=to_spend.txid,
 ...                                        txout=0,
 ...                                        script_sig=ScriptSig.empty(),
 ...                                        sequence=Sequence.max())]
@@ -463,7 +493,6 @@ This is how a P2PKH script can be created:
 # create public key
 >>> pubk = PublicKey.unhexlify('025f628d7a11ace2a6379119a778240cb70d6e720750416bb36f824514fbe88260')
 # create P2PKH script
->>> p2pkh_script = P2pkhScript(pubk)
 >>> p2pkh_script = P2pkhScript(pubk)
 >>> p2pkh_script.hexlify()
 '76a914905f77004d081f20dd421ba5288766d56724c3b288ac'
@@ -650,6 +679,17 @@ Let's see an example of this last case:
 >>> privk.sign(digest)
 ```
 
+In case one wants to sign a SegWit digest for the transaction, the following can be done:
+
+```python
+>>> unsigned = SegWitTransaction(...)
+>>> digest = unsigned.get_segwit_digest(2,   # the input to be signed
+                                        prev_script,  # the previous script to spend (this is the redeem/witness script in case of P2SH/P2WSH ouputs)
+                                        prev_amount,  # the amount of the output being spent
+                                        sighash=Sighash('NONE', anyonecanpay=True))  # sighash: 0x02 | 0x80
+>>> privk.sign(digest)
+```
+
 ### Contributing
 This library has two testing tools that can be found in the `tests/` folder:
 * `unit.py`, this runs basic unit testing
@@ -660,6 +700,7 @@ expand these tests are highly welcome.
 
 # TODO
 Since this library is still a work in progress, the following roadmap lists the improvements to be done:
+* Add support for SegWit addresses, as specified in [BIP173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki)
 * Expanding the test suites
 * Improving and expanding this documentation
 * Adding docstrings where missing (many places)
