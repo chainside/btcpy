@@ -273,29 +273,10 @@ class TestSpends(unittest.TestCase):
         self.preimage_streams = [Stream(TestSpends.rand_bytes()),
                                  Stream(TestSpends.rand_bytes()),
                                  Stream(TestSpends.rand_bytes()),
-                                 # Stream(TestSpends.rand_bytes()),
-                                 # Stream(TestSpends.rand_bytes()),
                                  Stream(TestSpends.rand_bytes())]
         self.preimages = [pre.serialize() for pre in self.preimage_streams]
         self.hashes160 = [preimage.hash160() for preimage in self.preimage_streams]
         self.hashes256 = [preimage.hash() for preimage in self.preimage_streams]
-
-        # self.embedders = [{'name': 'p2sh',
-        #                    'wrapper': P2shScript},
-        #                   {'name': 'p2wsh',
-        #                    'wrapper': P2wshV0Script},
-        #                   {'name': 'ifelse',
-        #                    'wrapper': IfElseScript},
-        #                   {'name': 'time',
-        #                    'wrapper': TimelockScript,
-        #                    'data': {'time': Locktime(100)}},
-        #                   {'name': 'relativetime',
-        #                    'wrapper': RelativeTimelockScript,
-        #                    'data': {'time': Sequence(10)}},
-        #                   {'name': 'hash256',
-        #                    'wrapper': Hashlock256Script},
-        #                   {'name': 'hash160',
-        #                    'wrapper': Hashlock160Script}]
 
         self.all = [(s['script'],
                      (s['solver'], s['script']),
@@ -333,10 +314,6 @@ class TestSpends(unittest.TestCase):
                                              '{}({})'.format(embedder.get_name(), script['name'])))
 
         self.all += [s for s in embedded]
-
-        # print(self.all)
-
-        # print(TestSpends.pairwise(self.all)[0])
 
         for embedder in self.double_embedders:
             included = [(x, y, t) for (x, y, t) in self.all if t != 'p2wpkh']
@@ -393,7 +370,7 @@ class TestSpends(unittest.TestCase):
         next_locktime = Locktime(0)
         next_sequence = Sequence.max()
         
-        i = 0  # 1785 # 382  # 2376  # 1180  #
+        i = 0
         while i < len(self.all) - 2:
             print('{:04d}\r'.format(i), end='')
             ins = [MutableTxIn(unspent['txid'], unspent['txout'].n, ScriptSig.empty(), unspent['next_seq']) for unspent in utxo]
@@ -425,7 +402,7 @@ class TestSpends(unittest.TestCase):
                     prev = unspent['solver'].witness_script
                 else:
                     prev = unspent['txout'].script_pubkey
-                print(prev, unspent['txout'].value, unspent['solver'].__class__.__name__)
+                # print(prev, unspent['txout'].value, unspent['solver'].__class__.__name__)
             regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
             
             utxo = []
@@ -478,69 +455,6 @@ class TestSpends(unittest.TestCase):
         
         regtest.teardown()
         
-        # for script, (keys, spend), stype in self.all:
-        #     with self.subTest(stype):
-        #         prev_amount -= 1000000
-        #         tx = Transaction.spends(2,
-        #                                 [TxIn(prev_txid, prev_vout, empty_script, next_sequence)],
-        #                                 [TxOut(prev_amount, 0, script)],
-        #                                 next_locktime,
-        #                                 spend_data)
-        #         # if counter == 535:
-        #         #     print('########################### SPENDING ###################################')
-        #         #     print('tx: {}'.format(tx))
-        #         #     print('raw: {}'.format(tx.hexlify()))
-        #         #     print('txid: {}'.format(tx.txid))
-        #         #     print('type: {}'.format(prev_type))
-        #         prev_script = spend['prev_script']
-        #         del spend['prev_script']
-        #         spend_data = [SpendingData(prev_script, *keys, **dict(spend, **{'prev_amount': prev_amount}))]
-        #         prev_txid = regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
-        #         prev_vout = 0
-        #         if 'time' in stype:
-        #             if 'absolute' in stype:
-        #                 next_locktime = Locktime(100)
-        #                 next_sequence = Sequence(0xfffffffe)
-        #             if 'relative' in stype:
-        #                 next_sequence = Sequence(10)
-        #                 regtest.send_rpc_cmd(['generate', '30'], 0)
-        #         else:
-        #             next_locktime = Locktime(0)
-        #             next_sequence = Sequence.max()
-        #         counter += 1
-        #         print('{:03d}\r'.format(counter), end='')
-        #         # if counter == 181:
-        #         #     print('########################### TO SPEND ###################################')
-        #         #     print('tx: {}'.format(tx))
-        #         #     print('txid: {}'.format(tx.txid))
-        #         #     print(spend_data[0])
-        #         #     print('type: {}'.format(stype))
-        #         if counter % 5 == 0:
-        #             regtest.send_rpc_cmd(['generate', '10'], 0)
-        #         prev_type = stype
-        #         self.assertTrue(True)
-
-        # with self.subTest('nulldata'):
-        #     prev_amount -= 1000000
-        #     # print('nulldata spends {}'.format(prev_type))
-        #     # print('########################### TO SPEND ###################################')
-        #     # print('tx: {}'.format(tx))
-        #     # print('txid: {}'.format(tx.txid))
-        #     outscript = self.final['script']
-        #     tx = Transaction.spends(2,
-        #                             [TxIn(prev_txid, prev_vout, empty_script, next_sequence)],
-        #                             [TxOut(prev_amount, 0, outscript)],
-        #                             next_locktime,
-        #                             spend_data)
-        #     # print('########################### SPENDING ###################################')
-        #     # print('tx: {}'.format(tx))
-        #     # print('raw: {}'.format(tx.hexlify()))
-        #     # print('txid: {}'.format(tx.txid))
-        #     regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
-
-        #     # except:
-        #     #     self.fail()
-
 
 if __name__ == '__main__':
     unittest.main()
