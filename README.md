@@ -40,9 +40,8 @@ Table of Contents
          * [Multisig](#multisig)
          * [Timelocks, Hashlocks, IfElse](#timelocks-hashlocks-ifelse)
          * [Low-level signing](#low-level-signing)
-         * [Contributing](#contributing)
+   * [Contributing](#contributing)
    * [TODO](#todo)
-
 
 # Requirements
 The strict requirements of this library are:
@@ -690,11 +689,12 @@ In case one wants to sign a SegWit digest for the transaction, the following can
 >>> privk.sign(digest)
 ```
 
-### Contributing
+# Contributing
 This library has two testing tools that can be found in the `tests/` folder:
 * `unit.py`, this runs basic unit testing
 * `integration.py` this runs tests of signed transactions, to do this, transactions are signed and
 sent to a Bitcoin Core node through the `sendrawtransaction` command.
+
 Contributors are invited to run these tests before submitting PRs. Also contributions to improve and
 expand these tests are highly welcome.
 
