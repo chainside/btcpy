@@ -140,10 +140,10 @@ class TransactionParser(Parser):
         self.segwit = False
         self.txins = 0
 
-    def get_version(self):
+    def __version(self):
         return int.from_bytes(self >> 4, 'little')
 
-    def get_txin_data(self):
+    def __txin_data(self):
         from ..structs.script import ScriptSig, CoinBaseScriptSig
         from ..structs.transaction import Sequence
         txout_hash = hexlify((self >> 32)[::-1]).decode()
@@ -156,7 +156,7 @@ class TransactionParser(Parser):
         sequence = Sequence(int.from_bytes(self >> 4, 'little'))
         return txout_hash, txout_index, script, sequence
 
-    def get_txins_data(self):
+    def __txins_data(self):
         """
         :return: a couple (segwit, txins) where `segwit` is a boolean
         telling whether the transaction has a segwit format
@@ -171,43 +171,43 @@ class TransactionParser(Parser):
         else:
             self.segwit = False
         self.txins = ntxins
-        return self.segwit, [self.get_txin_data() for _ in range(ntxins)]
+        return self.segwit, [self.__txin_data() for _ in range(ntxins)]
 
-    def get_txout(self, n):
+    def __txout(self, n):
         from ..structs.script import ScriptBuilder
         from ..structs.transaction import TxOut
         value = int.from_bytes(self >> 8, 'little')
         script = ScriptBuilder.identify(self >> self.parse_varint())
         return TxOut(value, n, script)
 
-    def get_txouts(self):
-        return [self.get_txout(i) for i in range(self.parse_varint())]
+    def __txouts(self):
+        return [self.__txout(i) for i in range(self.parse_varint())]
 
-    def get_witness(self):
+    def __witness(self):
         from ..structs.script import StackData
         if self.segwit:
             witnesses = []
             for _ in range(self.txins):
                 witnesses.append([StackData.from_bytes(self >> self.parse_varint()) for _ in range(self.parse_varint())])
             return witnesses
-        raise ValueError('Trying to get witness on a non-segwit transaction')
+        raise ValueError('Trying to get witness on a non-segwit transaction'y)
 
-    def get_locktime(self):
+    def __locktime(self):
         from ..structs.transaction import Locktime
         return Locktime(int.from_bytes(self >> 4, 'little'))
 
     def get_next_tx(self, mutable=False):
         from ..structs.script import CoinBaseScriptSig
         from ..structs.transaction import (CoinBaseTxIn, Witness, TxIn, SegWitTransaction, Transaction)
-        
-        version = self.get_version()
+
+        version = self.__version()
         # print('version: {}'.format(version))
-        segwit, txins_data = self.get_txins_data()
+        segwit, txins_data = self.__txins_data()
         # print('txins_data: {}'.format(txins_data))
-        txouts = self.get_txouts()
+        txouts = self.__txouts()
         # print('txouts: {}'.format(txouts))
         if segwit:
-            witness = self.get_witness()
+            witness = self.__witness()
             # print('witness: {}'.format([item.hexlify() for w in witness for item in w]))
             txins = [CoinBaseTxIn(*txin_data[2:], Witness(wit))
                      if isinstance(txin_data[2], CoinBaseScriptSig)
@@ -219,7 +219,7 @@ class TransactionParser(Parser):
                      else TxIn(*txin_data)
                      for txin_data in txins_data]
 
-        locktime = self.get_locktime()
+        locktime = self.__locktime()
         # print('locktime: {}'.format(locktime))
 
         if len(txins) > 1 and isinstance(txins[0], CoinBaseTxIn):
