@@ -190,7 +190,7 @@ class TransactionParser(Parser):
             for _ in range(self.txins):
                 witnesses.append([StackData.from_bytes(self >> self.parse_varint()) for _ in range(self.parse_varint())])
             return witnesses
-        raise ValueError('Trying to get witness on a non-segwit transaction'y)
+        raise ValueError('Trying to get witness on a non-segwit transaction')
 
     def __locktime(self):
         from ..structs.transaction import Locktime
