@@ -17,8 +17,7 @@ from ecdsa.util import sigencode_der
 from functools import partial
 
 from ..lib.types import HexSerializable
-from ..lib.codecs import Base58Codec
-from .address import Address
+from .address import Address, SegWitAddress
 from ..setup import is_mainnet
 
 
@@ -28,13 +27,16 @@ class PrivateKey(HexSerializable):
 
     @staticmethod
     def from_wif(wif):
-        return PrivateKey(bytearray(b58decode_check(wif)[1:-1]))
+        drop_last = ((wif[0] in ('K', 'L') and is_mainnet()) or (wif[0] == 'c' and not is_mainnet()))
+        decoded = b58decode_check(wif)
+        decoded = decoded[1:-1] if drop_last else decoded[1:]
+        return PrivateKey(bytearray(decoded))
 
     @staticmethod
     def from_bip32(bip32):
         if bip32[:4] not in {'xprv', 'tprv'}:
             raise ValueError("Key does not start with either 'xprv' or 'tprv'")
-        decoded = Base58Codec.decode(bip32)
+        decoded = b58decode_check(bip32)
         if decoded[-33] != 0:
             raise ValueError('Byte -33 is not 0x00, {} instead'.format(decoded[-33]))
         return PrivateKey(decoded[-32:])
@@ -98,7 +100,7 @@ class PublicKey(HexSerializable):
     def from_bip32(bip32):
         if bip32[:4] not in {'xpub', 'tpub'}:
             raise WrongPubKeyFormat("Key does not start with either 'xpub' or 'tpub'")
-        decoded = Base58Codec.decode(bip32)
+        decoded = b58decode_check(bip32)
         return PublicKey(decoded[-33:])
 
     @staticmethod
@@ -178,7 +180,7 @@ class PublicKey(HexSerializable):
     def to_segwit_address(self, mainnet=None):
         if mainnet is None:
             mainnet = is_mainnet()
-        return Address('p2wpkh', self.hash(), mainnet)
+        return SegWitAddress('p2wpkh', self.hash(), mainnet)
 
     def __eq__(self, other):
         return (self.type, self.compressed, self.uncompressed) == (other.type, other.compressed, other.uncompressed)

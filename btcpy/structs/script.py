@@ -18,7 +18,8 @@ from abc import ABCMeta, abstractmethod
 from ..lib.types import HexSerializable, Immutable, cached
 from ..lib.parsing import ScriptParser, Parser, Stream, UnexpectedOperationFound
 from .crypto import WrongPubKeyFormat
-from .address import Address
+from .address import Address, SegWitAddress
+from ..setup import is_mainnet
 
 
 class WrongScriptTypeException(Exception):
@@ -539,10 +540,12 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         return StackData.from_bytes(self.serialize())
 
     @cached
-    def to_address(self, segwit=False):
+    def to_address(self, segwit_version=None):
         # TODO integration-test this
-        return Address('p2wsh' if segwit else 'p2sh',
-                       self.p2wsh_hash() if segwit else self.p2sh_hash())
+        if segwit_version is not None:
+            return SegWitAddress('p2wsh', self.p2wsh_hash(), segwit_version, is_mainnet())
+        else:
+            return Address('p2sh', self.p2sh_hash(), is_mainnet())
 
     def is_standard(self):
         """Subclasses which have standard types should reimplement this method"""
@@ -610,8 +613,13 @@ class P2wpkhV0Script(P2pkhScript):
     compile_fmt = 'OP_0 {}'
 
     def __init__(self, param):
-        if isinstance(param, Address) and param.type != self.type:
-            raise ValueError('Non-p2wpkh address provided. Address type: {}'.format(param.type))
+        if isinstance(param, SegWitAddress):
+            if param.type != self.type:
+                raise ValueError('Non-p2wpkh address provided. Address type: {}'.format(param.type))
+            else:
+                param = param.to_address()
+        # TODO: manage segwit addresses here
+        
         super().__init__(param)
 
     def __repr__(self):
@@ -619,10 +627,10 @@ class P2wpkhV0Script(P2pkhScript):
 
     @property
     def type(self):
-        return 'p2wpkh'
+        return 'p2wpkhv0'
 
     def address(self):
-        return Address('p2wpkh', self.pubkeyhash)
+        return SegWitAddress('p2wpkh', self.pubkeyhash, 0)
 
     def get_scriptcode(self):
         return P2pkhScript(self.pubkeyhash).to_stack_data()
@@ -687,8 +695,12 @@ class P2wshV0Script(P2shScript):
         # segwit p2wsh have different hashing method than regular p2sh scripts!
         if isinstance(param, ScriptPubKey):
             param = param.p2wsh_hash()
-        if isinstance(param, Address) and param.type != self.type:
-            raise ValueError('Non-p2wsh address provided. Address type: {}'.format(param.type))
+        if isinstance(param, SegWitAddress):
+            if param.type != 'p2wsh':
+                raise ValueError('Non-p2wsh address provided. Address type: {}'.format(param.type))
+            else:
+                param = param.to_address()
+                
         super().__init__(param)
 
     def __repr__(self):
@@ -696,7 +708,7 @@ class P2wshV0Script(P2shScript):
 
     @property
     def type(self):
-        return 'p2wsh'
+        return 'p2wshv0'
 
     def address(self):
         return Address('p2wsh', self.scripthash)

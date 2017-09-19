@@ -17,6 +17,7 @@ from btcpy.structs.transaction import *
 from btcpy.structs.script import *
 from btcpy.structs.crypto import PublicKey, PrivateKey
 from btcpy.structs.address import Address
+from btcpy.lib.codecs import CouldNotDecode
 from btcpy.setup import setup
 
 setup('regtest')
@@ -999,11 +1000,67 @@ scripts = {'p2sh': {'hex': 'a914ed4a0e1af5316666499ec6f8a5a99bf4abaf754987',
            'p2wpkh': {'hex': '0014f81b6a6cfaaf19dbd9e56b9cab2d8a457608ad8e',
                       'asm': '0 f81b6a6cfaaf19dbd9e56b9cab2d8a457608ad8e',
                       'code': 'P2wpkhV0Script(bytearray(unhexlify("f81b6a6cfaaf19dbd9e56b9cab2d8a457608ad8e")))',
-                      'type': 'p2wpkh'},
+                      'type': 'p2wpkhv0'},
            'p2wsh': {'hex': '0020cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70',
                      'asm': '0 cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70',
                      'code': 'P2wshV0Script(bytearray(unhexlify("cdbf909e935c855d3e8d1b61aeb9c5e3c03ae8021b286839b1a72f2e48fdba70")))',
-                     'type': 'p2wsh'}}
+                     'type': 'p2wshv0'}}
+
+keys = \
+   [('tpubDHVQPtNuLdRLj7FU348D5PcrkkPj5ibhN52cfjthEH9KTfwTaVmodTn1Ekpge6PhUjW1noZ452xesirHgBKbzmY6hz4eoVXDwHcjczDT7zb',
+     'tprv8koNFULfCFjfqeDg9QTcfyxkBisnvPQnnmRqPDrPp1LvdBggx6xDSyA94cjpAXS7ccGhsQ7w6q7Y9Ku31e1eTDztU49LVBz9B1sCDoeE6Jc'),
+    ('tpubDEhdzhXujo86G6PXroPKQJSCJi8qbdQvrALhTNiExsGKfFHXtVbTE9tnLBCAP7nqQrqfUSVTCDuqv6RMHu8PDL5a8G43b5N2zKsF89nmLd6',
+     'tprv8i1brHVfbRSRNdMjy9iiztn5jgcuSJE2GrjvArfwYbTvpm2mG6ms3fGvA5kdZ3qZ7KB26VehAudSCUURKT56Hej2pBgj26ZkNbdD1YMdTiD'),
+    ('tpubDDqNYkcvEKbQJKtda5miuWCBWqX2Bd8qJWgSNbsiqfSHRzNpsjpXHAMiNYNHZw9FCnkuJpVAJjZkTeujhT4h293w6YMexGyAgNGRYWVtJ1D',
+     'tprv8h9LQLag5wujQrrqgS78W6Y4wp162HwvjD5f65qRRPdtbW84FLzw6fjrCNeqEvsKqiDxLtzJ9oHUGVTL17KptjbDVqgJ2XvAs2LcvSWrTUh'),
+    ('tpubDATAg7GX3FHknHSDzfVEgwo8U1aEWPNdkgRjs4dBF244x9xC6tRqUkM8ZMk8JNHnmQMqNG1evQBNKwt97G348FXaWjhT88UWbwqrBTpmwe3',
+     'tprv8dm8XhEGtsc5tpQS71peHY91tz4JM4BjBNpxaYaspkFg7fhRUVcFJFjGPFHYGQLo21nmCrkjryoUFJKSKMUjKqpuRXAmMMhvMaP27UtqeLA'),
+    ('xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8',
+     'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi'),
+    ('xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw',
+     'xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7'),
+    ('xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ',
+     'xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs'),
+    ('xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5',
+     'xprv9z4pot5VBttmtdRTWfWQmoH1taj2axGVzFqSb8C9xaxKymcFzXBDptWmT7FwuEzG3ryjH4ktypQSAewRiNMjANTtpgP4mLTj34bhnZX7UiM'),
+    ('xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV',
+     'xprvA2JDeKCSNNZky6uBCviVfJSKyQ1mDYahRjijr5idH2WwLsEd4Hsb2Tyh8RfQMuPh7f7RtyzTtdrbdqqsunu5Mm3wDvUAKRHSC34sJ7in334'),
+    ('xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy',
+     'xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76'),
+    ('xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB',
+     'xprv9s21ZrQH143K31xYSDQpPDxsXRTUcvj2iNHm5NUtrGiGG5e2DtALGdso3pGz6ssrdK4PFmM8NSpSBHNqPqm55Qn3LqFtT2emdEXVYsCzC2U'),
+    ('xpub69H7F5d8KSRgmmdJg2KhpAK8SR3DjMwAdkxj3ZuxV27CprR9LgpeyGmXUbC6wb7ERfvrnKZjXoUmmDznezpbZb7ap6r1D3tgFxHmwMkQTPH',
+     'xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt'),
+    ('xpub6ASAVgeehLbnwdqV6UKMHVzgqAG8Gr6riv3Fxxpj8ksbH9ebxaEyBLZ85ySDhKiLDBrQSARLq1uNRts8RuJiHjaDMBU4Zn9h8LZNnBC5y4a',
+     'xprv9wSp6B7kry3Vj9m1zSnLvN3xH8RdsPP1Mh7fAaR7aRLcQMKTR2vidYEeEg2mUCTAwCd6vnxVrcjfy2kRgVsFawNzmjuHc2YmYRmagcEPdU9'),
+    ('xpub6DF8uhdarytz3FWdA8TvFSvvAh8dP3283MY7p2V4SeE2wyWmG5mg5EwVvmdMVCQcoNJxGoWaU9DCWh89LojfZ537wTfunKau47EL2dhHKon',
+     'xprv9zFnWC6h2cLgpmSA46vutJzBcfJ8yaJGg8cX1e5StJh45BBciYTRXSd25UEPVuesF9yog62tGAQtHjXajPPdbRCHuWS6T8XA2ECKADdw4Ef'),
+    ('xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL',
+     'xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc'),
+    ('xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt',
+     'xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j'),
+    ('xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13',
+     'xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6'),
+    ('xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y',
+     'xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L')]
+
+segwit_valid_addresses = [{'address': "BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4",
+                           'script': "0014751e76e8199196d454941c45d1b3a323f1433bd6"},
+                          {'address': "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7",
+                           'script': "00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262"},
+                          {'address': "tb1qqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesrxh6hy",
+                           'script': "0020000000c4a5cad46221b2a187905e5266362b99d5e91c6ce24d165dab93e86433"}]
+
+segwit_invalid_addresses = ["tc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty",
+                            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
+                            "BC13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2",
+                            "bc1rw5uspcuh",
+                            "bc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90",
+                            "BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",
+                            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7",
+                            "bc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du",
+                            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
+                            "bc1gmk9yu"]
 
 
 # This automatically tests for equality between all the raw transactions in `transactions`
@@ -1055,44 +1112,19 @@ for key in scripts:
     setattr(TestScriptSuccess, 'test_{}'.format(key), test(key))
 
 
-keys = \
-   [('tpubDHVQPtNuLdRLj7FU348D5PcrkkPj5ibhN52cfjthEH9KTfwTaVmodTn1Ekpge6PhUjW1noZ452xesirHgBKbzmY6hz4eoVXDwHcjczDT7zb',
-     'tprv8koNFULfCFjfqeDg9QTcfyxkBisnvPQnnmRqPDrPp1LvdBggx6xDSyA94cjpAXS7ccGhsQ7w6q7Y9Ku31e1eTDztU49LVBz9B1sCDoeE6Jc'),
-    ('tpubDEhdzhXujo86G6PXroPKQJSCJi8qbdQvrALhTNiExsGKfFHXtVbTE9tnLBCAP7nqQrqfUSVTCDuqv6RMHu8PDL5a8G43b5N2zKsF89nmLd6',
-     'tprv8i1brHVfbRSRNdMjy9iiztn5jgcuSJE2GrjvArfwYbTvpm2mG6ms3fGvA5kdZ3qZ7KB26VehAudSCUURKT56Hej2pBgj26ZkNbdD1YMdTiD'),
-    ('tpubDDqNYkcvEKbQJKtda5miuWCBWqX2Bd8qJWgSNbsiqfSHRzNpsjpXHAMiNYNHZw9FCnkuJpVAJjZkTeujhT4h293w6YMexGyAgNGRYWVtJ1D',
-     'tprv8h9LQLag5wujQrrqgS78W6Y4wp162HwvjD5f65qRRPdtbW84FLzw6fjrCNeqEvsKqiDxLtzJ9oHUGVTL17KptjbDVqgJ2XvAs2LcvSWrTUh'),
-    ('tpubDATAg7GX3FHknHSDzfVEgwo8U1aEWPNdkgRjs4dBF244x9xC6tRqUkM8ZMk8JNHnmQMqNG1evQBNKwt97G348FXaWjhT88UWbwqrBTpmwe3',
-     'tprv8dm8XhEGtsc5tpQS71peHY91tz4JM4BjBNpxaYaspkFg7fhRUVcFJFjGPFHYGQLo21nmCrkjryoUFJKSKMUjKqpuRXAmMMhvMaP27UtqeLA'),
-    ('xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8',
-     'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi'),
-    ('xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw',
-     'xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7'),
-    ('xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ',
-     'xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs'),
-    ('xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5',
-     'xprv9z4pot5VBttmtdRTWfWQmoH1taj2axGVzFqSb8C9xaxKymcFzXBDptWmT7FwuEzG3ryjH4ktypQSAewRiNMjANTtpgP4mLTj34bhnZX7UiM'),
-    ('xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV',
-     'xprvA2JDeKCSNNZky6uBCviVfJSKyQ1mDYahRjijr5idH2WwLsEd4Hsb2Tyh8RfQMuPh7f7RtyzTtdrbdqqsunu5Mm3wDvUAKRHSC34sJ7in334'),
-    ('xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy',
-     'xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76'),
-    ('xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB',
-     'xprv9s21ZrQH143K31xYSDQpPDxsXRTUcvj2iNHm5NUtrGiGG5e2DtALGdso3pGz6ssrdK4PFmM8NSpSBHNqPqm55Qn3LqFtT2emdEXVYsCzC2U'),
-    ('xpub69H7F5d8KSRgmmdJg2KhpAK8SR3DjMwAdkxj3ZuxV27CprR9LgpeyGmXUbC6wb7ERfvrnKZjXoUmmDznezpbZb7ap6r1D3tgFxHmwMkQTPH',
-     'xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt'),
-    ('xpub6ASAVgeehLbnwdqV6UKMHVzgqAG8Gr6riv3Fxxpj8ksbH9ebxaEyBLZ85ySDhKiLDBrQSARLq1uNRts8RuJiHjaDMBU4Zn9h8LZNnBC5y4a',
-     'xprv9wSp6B7kry3Vj9m1zSnLvN3xH8RdsPP1Mh7fAaR7aRLcQMKTR2vidYEeEg2mUCTAwCd6vnxVrcjfy2kRgVsFawNzmjuHc2YmYRmagcEPdU9'),
-    ('xpub6DF8uhdarytz3FWdA8TvFSvvAh8dP3283MY7p2V4SeE2wyWmG5mg5EwVvmdMVCQcoNJxGoWaU9DCWh89LojfZ537wTfunKau47EL2dhHKon',
-     'xprv9zFnWC6h2cLgpmSA46vutJzBcfJ8yaJGg8cX1e5StJh45BBciYTRXSd25UEPVuesF9yog62tGAQtHjXajPPdbRCHuWS6T8XA2ECKADdw4Ef'),
-    ('xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL',
-     'xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc'),
-    ('xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt',
-     'xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j'),
-    ('xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13',
-     'xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6'),
-    ('xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y',
-     'xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L')]
-
+class TestSegWitAddress(unittest.TestCase):
+    
+    def test_valid(self):
+        for data in segwit_valid_addresses:
+            address = SegWitAddress.from_string(data['address'], check_network=False)
+            script = ScriptBuilder.identify(unhexlify(data['script']))
+            self.assertTrue(address.hash == script.address().hash)
+            
+    def test_invalid(self):
+        for address in segwit_invalid_addresses:
+            with self.assertRaises(CouldNotDecode):
+                print(SegWitAddress.from_string(address, check_network=False))
+            
 
 class TestReplace(unittest.TestCase):
 
@@ -1639,7 +1671,7 @@ class TestAddress(unittest.TestCase):
 
     def test_success(self):
         for net, addr_type, address, hashed_data in self.good_addresses:
-            from_string = Address.from_string(address, check_mainnet=False)
+            from_string = Address.from_string(address, check_network=False)
             self.assertTrue(address == str(from_string))
             self.assertTrue(from_string.type == addr_type)
             self.assertTrue(from_string.network == net)
@@ -1648,7 +1680,7 @@ class TestAddress(unittest.TestCase):
     def test_fail(self):
         for address in self.bad_addresses:
             with self.assertRaises(ValueError):
-                Address.from_string(address)
+                Address.from_string(address, check_network=False)
 
 
 class TestStandardness(unittest.TestCase):
