@@ -700,7 +700,6 @@ expand these tests are highly welcome.
 
 # TODO
 Since this library is still a work in progress, the following roadmap lists the improvements to be done:
-* Add support for SegWit addresses, as specified in [BIP173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki)
 * Expanding the test suites
 * Improving and expanding this documentation
 * Adding docstrings where missing (many places)
