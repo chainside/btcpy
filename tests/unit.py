@@ -20,6 +20,7 @@ from btcpy.structs.crypto import PublicKey, PrivateKey
 from btcpy.structs.address import Address
 from btcpy.lib.codecs import CouldNotDecode
 from btcpy.setup import setup
+from btcpy.structs.hd import *
 
 setup('regtest')
 
@@ -1121,6 +1122,69 @@ invalid_blocks = [{'hash': "0000000000000978a6f26995c9937e99d42c1d4d4131ad162e28
                    'raw': "09000000803763a9343d282e16ad31414d1d2cd4997e93c99569f2a678010000000000004af2cfcf85812bc49dfe0c021353ca8bc0f51a6c0c37341cbcb9dbfe69b109d158f92359a1ca041ac282170205010000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff2503462c1100045cf9235904ae6e70310c27852359af87235995010100082f5345475749542fffffffff02d04e5009000000001976a914e58e176ed4e0b65af4719de10b28697a1cc8b59188ac0000000000000000266a24aa21a9edfcb8adcad672e717fc5031797f44084164517ec62423bd80c72080e21023005b01200000000000000000000000000000000000000000000000000000000000000000000000000100000001f062a2769ae1bca9c877ad596917c201f9276028d00a8be2ba6caa231f948010000000006b483045022100dcd74566a27e0216820bf1f1c82c8c2cc268003b89b107f5b2eed70e4e6f8f3c02204912e5dc37e0df238685aa25c5af98871edc08999aaccf6087a7b2456ffae8ab0121024e68ae959c2e5ea5930d7fb0b0b657237345002a2f796f3cb5c88ef169f7ae1fffffffff02e073eb0b000000001976a91483733adf835c38ff1f38f9c94f2030461180233f88ac0000000000000000516a4c4e424c466f7220676f6f64206c75636b2c2049206c696b65206d79207268796d6573206174726f63696f75730a537570657263616c6166726167696c697374696365787069616c69646f63696f7573000000000100000001b2da1ead2f96efbb8aa2a2d0f74655fc6396745acdd9989d6c2e1f3c8e510a8b00000000fd660100473044022078e21a2dcba2b35b45cb6ea143a831962c72f205249561f14f9c33bb581168f502203c624845c3a18641b0beee70245a3e38aaa8a4afa01bfebcde7b7a1db73ae74c0147304402207fdb4ee7c9f91b43cc58276c641d4686937655553961e7b559d53a93f46c1b3c02200cfd8c527631310b54fb26f0df0a538803fc4b7aeba3735c03d970d31f56f085014730440220475b25c35a8e15e256f3331988cabd4c8bcc3f2f7d172b4a05da43d6ab0b90e10220799b526aec1ad03b450e30bceab70031f4a4864ff8f76755ecbbdc1acce3daa3014c8b532102bcdbcb324179b7648e2c7802da2c1a49ae94b51188d86e7352b39257f6bba56c2102fe22fdac89648502a6eeefd84b1616142e267efb1f54fa0932380ae2a14e764421031f1f73c3723efda2a31298729e56f69acfe0751c6520f69ff6f0941998634c462102fddf017fa0899ae0ea23cbd7f9b159b9d9fa8f56c62d55706913e407bb49125654aeffffffff02900d3e060000000017a914716370a50fa600b4ecc34312b9d0d5f3c294166b870000000000000000326a3045584f4e554d01006c870c00000000005fc8fd45e3777fa41f75c0862c10648541074fe3aa70f126a9a3bdd2c4512d46000000000100000001e59d218d60ea0d697f9345d9096f6943d8289cd7c6277e0669f31bfce6e5722600000000fd6801004730440220528a59f989522b05750c719cdcc6ba6e5aa0f0755b4618f01c87b78fbf37ccef0220232108ed677ce5d53e0a8f0c6810fb49576d6fe12dbda41dbfffb8376e0959c001483045022100df08c88458874ff4bca8403883f2674d7e1620200cbeb000702f74823ae9bf18022022d09cc8fe53d516df71ddc0674a6b90b6ffc1cc25d2976c81b5332a7a6b13e001483045022100f786162240a5be1231e7dcfaf6e4c53fab50a6a8e29f772173d0388c35854a1502201ceb4f663ef445ba801f6a28042df29016099f3bad4cff8cc5cc87b804f61281014c8b532102bcdbcb324179b7648e2c7802da2c1a49ae94b51188d86e7352b39257f6bba56c2102fe22fdac89648502a6eeefd84b1616142e267efb1f54fa0932380ae2a14e764421031f1f73c3723efda2a31298729e56f69acfe0751c6520f69ff6f0941998634c462102fddf017fa0899ae0ea23cbd7f9b159b9d9fa8f56c62d55706913e407bb49125654aeffffffff02a8093e060000000017a914716370a50fa600b4ecc34312b9d0d5f3c294166b870000000000000000326a3045584f4e554d010076870c0000000000f2097f577ac812c33a583d36db7fdb97a751023cb8935cd357f9e451d565a74800000000010000000137f112a6fdbb347e84ba3c0b1a18650bb640cbf4838fd0f3cc95fa0a7060b77d00000000fd67010047304402207ce0c66982709b4d6b6b04d6e59febe86c7101cb313e3ecef2ceb409a0350c0602202e6cf059e619e3bac5f41e7a8e949dbcf6d6ba3b344397546c88209eb5f27b8b01483045022100caa4a03cbdebee28f6ca2095b538f62a455ca2be28d0726c6d2642403fac900202202d8768dadbb827cb4c1bbe2766a7915d4fd24c8c8c6c797358e3f0db10e9f6820147304402204866411ca7970928535fb73f52a7bb19358a63eaeba05d2b85b47bb2fc835ef602207f4db7ecc486e07a9f8d76b43bc5503bfb2d631f77ce5c7a893fdabb24f25cc4014c8b532102bcdbcb324179b7648e2c7802da2c1a49ae94b51188d86e7352b39257f6bba56c2102fe22fdac89648502a6eeefd84b1616142e267efb1f54fa0932380ae2a14e764421031f1f73c3723efda2a31298729e56f69acfe0751c6520f69ff6f0941998634c462102fddf017fa0899ae0ea23cbd7f9b159b9d9fa8f56c62d55706913e407bb49125654aeffffffff02c0053e060000000017a914716370a50fa600b4ecc34312b9d0d5f3c294166b870000000000000000326a3045584f4e554d010080870c0000000000b0394ec686b9848c685ed0695fca5f29af6b1c681b2904ea71efe262ff189f9700000000"}]
 short_blocks = [{'hash': "0001426804",
                  'raw': "00014268046f63696ff7573006ad31414d1d2cd4997e93c99569f0"}]
+
+hd_keys =[{'path': "m",
+           'pub': 'xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8',
+           'prv': 'xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi'},
+          {'path': "m/0'",
+           'pub': 'xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw',
+           'prv': 'xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7'},
+          {'path': "m/0'/1",
+           'pub': "xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ",
+           'prv': 'xprv9wTYmMFdV23N2TdNG573QoEsfRrWKQgWeibmLntzniatZvR9BmLnvSxqu53Kw1UmYPxLgboyZQaXwTCg8MSY3H2EU4pWcQDnRnrVA1xe8fs'},
+          {'path': "m/0'/1/2'",
+           'pub': 'xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5',
+           'prv': 'xprv9z4pot5VBttmtdRTWfWQmoH1taj2axGVzFqSb8C9xaxKymcFzXBDptWmT7FwuEzG3ryjH4ktypQSAewRiNMjANTtpgP4mLTj34bhnZX7UiM'},
+          {'path': "m/0'/1/2'/2",
+           'pub': 'xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV',
+           'prv': 'xprvA2JDeKCSNNZky6uBCviVfJSKyQ1mDYahRjijr5idH2WwLsEd4Hsb2Tyh8RfQMuPh7f7RtyzTtdrbdqqsunu5Mm3wDvUAKRHSC34sJ7in334'},
+          {'path': "m/0'/1/2'/2/1000000000",
+           'pub': 'xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy',
+           'prv': 'xprvA41z7zogVVwxVSgdKUHDy1SKmdb533PjDz7J6N6mV6uS3ze1ai8FHa8kmHScGpWmj4WggLyQjgPie1rFSruoUihUZREPSL39UNdE3BBDu76'},
+          {'path': "m",
+           'pub': 'xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB',
+           'prv': 'xprv9s21ZrQH143K31xYSDQpPDxsXRTUcvj2iNHm5NUtrGiGG5e2DtALGdso3pGz6ssrdK4PFmM8NSpSBHNqPqm55Qn3LqFtT2emdEXVYsCzC2U'},
+          {'path': "m/0",
+           'pub': 'xpub69H7F5d8KSRgmmdJg2KhpAK8SR3DjMwAdkxj3ZuxV27CprR9LgpeyGmXUbC6wb7ERfvrnKZjXoUmmDznezpbZb7ap6r1D3tgFxHmwMkQTPH',
+           'prv': 'xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt'},
+          {'path': "m/0/2147483647'",
+           'pub': 'xpub6ASAVgeehLbnwdqV6UKMHVzgqAG8Gr6riv3Fxxpj8ksbH9ebxaEyBLZ85ySDhKiLDBrQSARLq1uNRts8RuJiHjaDMBU4Zn9h8LZNnBC5y4a',
+           'prv': 'xprv9wSp6B7kry3Vj9m1zSnLvN3xH8RdsPP1Mh7fAaR7aRLcQMKTR2vidYEeEg2mUCTAwCd6vnxVrcjfy2kRgVsFawNzmjuHc2YmYRmagcEPdU9'},
+          {'path': "m/0/2147483647'/1",
+           'pub': 'xpub6DF8uhdarytz3FWdA8TvFSvvAh8dP3283MY7p2V4SeE2wyWmG5mg5EwVvmdMVCQcoNJxGoWaU9DCWh89LojfZ537wTfunKau47EL2dhHKon',
+           'prv': 'xprv9zFnWC6h2cLgpmSA46vutJzBcfJ8yaJGg8cX1e5StJh45BBciYTRXSd25UEPVuesF9yog62tGAQtHjXajPPdbRCHuWS6T8XA2ECKADdw4Ef'},
+          {'path': "m/0/2147483647'/1/2147483646'",
+           'pub': 'xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL',
+           'prv': 'xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc'},
+          {'path': "m/0/2147483647'/1/2147483646'/2",
+           'pub': 'xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt',
+           'prv': 'xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j'},
+          {'path': "m",
+           'pub': 'xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13',
+           'prv': 'xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6'},
+          {'path': "m/0'",
+           'pub': 'xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y',
+           'prv': 'xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L'},
+          ]
+
+
+class TestHD(unittest.TestCase):
+        
+    def test_hd(self):
+        masterpriv = None
+        for data in hd_keys:
+            priv = ExtendedKey.decode(data['prv'], check_network=False)
+            pub = ExtendedKey.decode(data['pub'], check_network=False)
+            if data['path'] == 'm':
+                masterpriv = priv
+            self.assertEqual(priv.pub().encode(mainnet=True), pub.encode(mainnet=True))
+            self.assertEqual(priv.encode(mainnet=True), data['prv'])
+            self.assertEqual(pub.encode(mainnet=True), data['pub'])
+            derived = masterpriv.derive(data['path'])
+            # print('DERIVED:\n{}'.format(derived))
+            # print('EXPECTED:\n{}'.format(ExtendedPrivateKey.decode(data['prv'], check_network=False)))
+            self.assertEqual(derived.encode(mainnet=True), data['prv'])
+            self.assertEqual(derived.pub().encode(mainnet=True), data['pub'])
 
 
 class TestBlock(unittest.TestCase):
