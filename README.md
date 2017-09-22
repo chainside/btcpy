@@ -28,6 +28,7 @@ Table of Contents
       * [Network setup](#network-setup)
       * [Parsing and serialization](#parsing-and-serialization)
       * [Keys and addresses](#keys-and-addresses)
+         * [HD keys](#hd-keys)
       * [Scripts](#scripts)
          * [Low-level scripting functionalities](#low-level-scripting-functionalities)
       * [Transactions](#transactions)
@@ -223,7 +224,7 @@ and `'p2wpkh'` or `'p2wsh'` in the case of SegWitAddress. `hashed_data` must be 
 160 or 256 bits long `bytearray`.
 
 ### HD keys
-The `structs.hd` module provides functionalities to handle BIP32 HD keys
+The `structs.hd` module provides functionalities to handle BIP32 HD keys.
 Specifically, it provides the following two classes:
 
 * `ExtendedPublicKey`
@@ -232,7 +233,7 @@ Specifically, it provides the following two classes:
 These classes both provide the `get_child(index, hardened=False)` method. If
 called on an `ExtendedPublicKey`, `hardened` must be set to `False`, otherwise
 `heardened` can be either `True` or `False`. The `ExtendedPublicKey` corresponding
-to an `ExtendedPrivateKey` can be obtained throug the `pub()` method.
+to an `ExtendedPrivateKey` can be obtained through the `pub()` method.
 
 As seen in the example above, `ExtendedPublicKey` and `ExtendedPrivateKey`
 contain the simpler structures `PublicKey` and `PrivateKey`, respectively.
