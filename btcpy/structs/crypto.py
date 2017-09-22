@@ -15,13 +15,18 @@ from hashlib import sha256
 from ecdsa import SigningKey, SECP256k1
 from ecdsa.util import sigencode_der
 from functools import partial
+from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import Address, SegWitAddress
 from ..setup import is_mainnet
 
 
-class PrivateKey(HexSerializable):
+class Key(HexSerializable, metaclass=ABCMeta):
+    pass
+
+
+class PrivateKey(Key):
 
     highest_s = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
@@ -31,15 +36,6 @@ class PrivateKey(HexSerializable):
         decoded = b58decode_check(wif)
         decoded = decoded[1:-1] if drop_last else decoded[1:]
         return PrivateKey(bytearray(decoded))
-
-    @staticmethod
-    def from_bip32(bip32):
-        if bip32[:4] not in {'xprv', 'tprv'}:
-            raise ValueError("Key does not start with either 'xprv' or 'tprv'")
-        decoded = b58decode_check(bip32)
-        if decoded[-33] != 0:
-            raise ValueError('Byte -33 is not 0x00, {} instead'.format(decoded[-33]))
-        return PrivateKey(decoded[-32:])
 
     @staticmethod
     def unhexlify(hexa):
@@ -80,12 +76,15 @@ class PrivateKey(HexSerializable):
     def __eq__(self, other):
         return self.key == other.key
     
+    def __str__(self):
+        return self.hexlify()
+    
 
 class WrongPubKeyFormat(Exception):
     pass
 
 
-class PublicKey(HexSerializable):
+class PublicKey(Key):
 
     p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
     uncompressed_bytes = 64
@@ -95,13 +94,13 @@ class PublicKey(HexSerializable):
              0x04: 'uncompressed'}
 
     headers = {val: key for key, val in types.items()}
-
+    
     @staticmethod
-    def from_bip32(bip32):
-        if bip32[:4] not in {'xpub', 'tpub'}:
-            raise WrongPubKeyFormat("Key does not start with either 'xpub' or 'tpub'")
-        decoded = b58decode_check(bip32)
-        return PublicKey(decoded[-33:])
+    def from_point(point, compressed=True):
+        result = PublicKey(point.x().to_bytes(32, 'big') + point.y().to_bytes(32, 'big'))
+        if compressed:
+            result.compress()
+        return result
 
     @staticmethod
     def unhexlify(hexa):
@@ -180,7 +179,14 @@ class PublicKey(HexSerializable):
     def to_segwit_address(self, mainnet=None):
         if mainnet is None:
             mainnet = is_mainnet()
-        return SegWitAddress('p2wpkh', self.hash(), mainnet)
+        if self.type == 'uncompressed':
+            pubk = PublicKey(self.compressed)
+        else:
+            pubk = self
+        return SegWitAddress('p2wpkh', pubk.hash(), mainnet)
+
+    def compress(self):
+        self.type = 'compressed'
 
     def __eq__(self, other):
         return (self.type, self.compressed, self.uncompressed) == (other.type, other.compressed, other.uncompressed)
