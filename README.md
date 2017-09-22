@@ -12,7 +12,8 @@ this library is to provide a simple interface to parse and create complex
 Bitcoin scripts.
 
 **N.B.: this library is a work in progress so it is highly discouraged to use it in
-a production environment**
+a production environment. Also, as long as the version is 0.\*, API breaking changes
+should be expected**
 
 Table of Contents
 =================
@@ -129,14 +130,18 @@ pubk = PublicKey.unhexlify(pubk_hex)
 privk = PrivateKey.unhexlify(privk_hex)
 ```
 
-`PublicKey` and `PrivateKey` can also be extracted from their BIP32 formats:
+`PublicKey` and `PrivateKey` can also be extracted from their BIP32 formats using the
+`hd` module:
 
 ```python
->>> priv = PrivateKey.from_bip32('tprv8kxXxKwakWDtXvKBjjR5oHDFS7Z21HCVLMVUqEFCSVChUZ26BMDDH1JmaGUTEYGMUyQQBSfTgEK76QBvLephodJid5GTEiGFVGJdEBYptd7')
->>> priv.hexlify()
+>>> from btcpy.structs.hd import ExtendedPrivateKey, ExtendedPublicKey
+>>> priv = ExtendedPrivateKey.decode('tprv8kxXxKwakWDtXvKBjjR5oHDFS7Z21HCVLMVUqEFCSVChUZ26BMDDH1JmaGUTEYGMUyQQBSfTgEK76QBvLephodJid5GTEiGFVGJdEBYptd7')
+# priv.key holds a `PrivateKey`
+>>> priv.key.hexlify()
 'a12618ff6540dcd79bf68fda2faf0589b672e18b99a1ebcc32a40a67acdab608'
->>> pub = PublicKey.from_bip32('tpubDHea6jyptsuZRPLydP5gCgsN194xAcPPuf6G7kHVrm16K3Grok2oTVvdkNvPM465uuKAShgba7A2hHYeGGuS9B8AQGABfc6hp7mpcLLJUsk')
->>> pub.hexlify()
+>>> pub = ExtendedPublicKey.decode('tpubDHea6jyptsuZRPLydP5gCgsN194xAcPPuf6G7kHVrm16K3Grok2oTVvdkNvPM465uuKAShgba7A2hHYeGGuS9B8AQGABfc6hp7mpcLLJUsk')
+# pub.key holds a `PubicKey`
+>>> pub.key.hexlify()
 '025f628d7a11ace2a6379119a778240cb70d6e720750416bb36f824514fbe88260'
 ```
 
@@ -150,8 +155,10 @@ expect a `bytearray` type.
 The `PublicKey` class can handle both compressed and uncompressed public
 keys. In any case both the compressed and uncompressed version can be extracted.
 However, the structure will remember how it was initialised, so the `hexlify()`,
-`hash()` and `to_address()` will produce different results depending whether
-the `PublicKey` was initialised with a compressed or uncompressed public key.
+`hash()` and `to_address()` methods will produce different
+results depending whether the `PublicKey` was initialised with a compressed or
+uncompressed public key. The `to_segwit_address()` method will always consider
+the key as compressed (P2WPKH addresses are only allowed with compressed keys).
 An example of this behaviour follows:
 
 ```python
@@ -163,14 +170,18 @@ An example of this behaviour follows:
 '02ea4e183e8c751a4cc72abb7088cea79351dbfb7981ceb48f286ccfdade4d42c8'
 >>> str(uncomp.to_address())
 'mtDD9VFhPaRi6C6McMSnhb7nUZceSh4MnK'
+>>> str(uncomp.to_segwit_address())
+'tb1qxs0gs9dzukv863jud3wpldtrjh9edeqqqzahcz'  # this actually refers to the compressed version!
 >>> str(compr.to_address())
 'mkGY1QBotzNCrpJaEsje3BpYJsktksi3gJ'
+>>> str(compr.to_segwit_address())
+'tb1qxs0gs9dzukv863jud3wpldtrjh9edeqqqzahcz'
 ```
 
-Please note that by default the `to_address()` method will return an address
-in the format of the network type specified in `setup` (`regtest` in the
-case of this example) but a flag can be passed to it to return an address
-for another network:
+Please note that by default the `to_address()` and `to_segwit_address()`
+methods will return an address in the format of the network type
+specified in `setup` (`regtest` in the case of this example) but a flag
+can be passed to it to return an address for another network:
 
 ```python
 >>> str(uncomp.to_address(mainnet=True))
@@ -188,29 +199,45 @@ pubk = PrivateKey.unhexlify(privk_hex).pub()
 the `pub()` method will return by default the compressed public key.
 The uncompressed version can be obtained by adding the flag `compressed=False`.
 
+Additionally, one can make sure that a public key is considered compressed by
+using its `compress()` method:
+```python
+>>> uncomp.compress()
+>>> str(uncomp.to_address())
+'mkGY1QBotzNCrpJaEsje3BpYJsktksi3gJ'
+```
+
 Addresses can be either created from a `PublicKey` or from a script.
 In particular this second use case will be documented in the **Script** section.
 
-Another low-level way to build an `Address` is by using its constructor and providing
-the following data:
+Another low-level way to build an `Address` or `SegWitAddress` is by using their
+ constructor and providing the following data:
 
 ```python
-Address(addr_type, hashed_data)
+address = Address(addr_type, hashed_data)
+sw_address = SegWitAddress(addr_type, hashed_data, version)
 ```
 
-where `addr_type` can be any of the following:
+where `addr_type` can be either `'p2pkh'` or `'p2sh'` in the case of `Address`
+and `'p2wpkh'` or `'p2wsh'` in the case of SegWitAddress. `hashed_data` must be a
+160 or 256 bits long `bytearray`.
 
-```python
-'p2wpkh'
-'p2wsh'
-'p2pkh'
-'p2sh'
-```
+### HD keys
+The `structs.hd` module provides functionalities to handle BIP32 HD keys
+Specifically, it provides the following two classes:
 
-and `hashed_data` must be a 160 or 256 bits long `bytearray`. For the moment `p2wsh`
-and `p2wpkh` do not work as `addr_type`, but SegWit addresses (specified in
-[BIP173](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki)) will soon
-be introduced.
+* `ExtendedPublicKey`
+* `ExtendedPrivateKey`
+
+These classes both provide the `get_child(index, hardened=False)` method. If
+called on an `ExtendedPublicKey`, `hardened` must be set to `False`, otherwise
+`heardened` can be either `True` or `False`. The `ExtendedPublicKey` corresponding
+to an `ExtendedPrivateKey` can be obtained throug the `pub()` method.
+
+As seen in the example above, `ExtendedPublicKey` and `ExtendedPrivateKey`
+contain the simpler structures `PublicKey` and `PrivateKey`, respectively.
+These structures can be accessed through the `key` attribute.
+
 
 ## Scripts
 The main focus of this project is providing a simple way to create complex scripts. Scripts have
@@ -706,7 +733,6 @@ Since this library is still a work in progress, the following roadmap lists the 
 * Handling `OP_CODESEPARATOR`s  in the signing process
 * Adding caching to segwit digest computation to avoid quadratic hashing
 * Add further transaction creation helpers
-* Add RPC call to Bitcoin Core node
+* Add RPC calls to Bitcoin Core nodes
 * Add networking with Bitcoin Core nodes
-* Add BIP32 HD keys support and management
-* Consider replacing `ecdsa` with `secp256k1`
+* Add methods to generate private keys from entropy
