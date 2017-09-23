@@ -16,6 +16,7 @@ import copy
 
 from regtest import Manager
 from btcpy.structs.crypto import PrivateKey, PublicKey
+from btcpy.structs.hd import ExtendedPrivateKey, ExtendedPublicKey
 from btcpy.structs.transaction import Transaction, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
 from btcpy.structs.sig import *
 from btcpy.structs.script import *
@@ -228,8 +229,8 @@ class TestSpends(unittest.TestCase):
 
         super().__init__(*args, **kwargs)
 
-        pubs = [PublicKey.from_bip32(pair[0]) for pair in keys]
-        privs = [PrivateKey.from_bip32(pair[1]) for pair in keys]
+        pubs = [ExtendedPublicKey.decode(pair[0]).key for pair in keys]
+        privs = [ExtendedPrivateKey.decode(pair[1]).key for pair in keys]
         all_embedders = {'p2sh', 'p2wsh', 'ifelse', 'absolutetime', 'relativetime', 'hash160', 'hash256'}
 
         self.scripts = [{'name': 'p2pkh',
@@ -342,7 +343,7 @@ class TestSpends(unittest.TestCase):
 
     def test_all(self):
         global keys
-        priv = PrivateKey.from_bip32(keys[0][1])
+        priv = ExtendedPrivateKey.decode(keys[0][1]).key
         pk = priv.pub()
         addr_string = str(pk.to_address())
         utxo = []

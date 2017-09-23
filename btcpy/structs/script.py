@@ -339,10 +339,6 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
     @classmethod
     def unhexlify(cls, hex_string):
         return cls(Script(bytearray(unhexlify(hex_string))))
-    
-    @classmethod
-    def empty(cls):
-        return cls(Script(bytearray()))
 
     @staticmethod
     def compile(string):
@@ -447,6 +443,10 @@ class Script(BaseScript):
 
 
 class ScriptSig(BaseScript):
+    
+    @staticmethod
+    def empty():
+        return ScriptSig(bytearray())
 
     @staticmethod
     def from_stack_data(stack_data):
@@ -512,6 +512,10 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         if len(args) == 1:
             return args[0]
         return args
+    
+    @staticmethod
+    def empty():
+        return ScriptPubKey(bytearray())
 
     def to_json(self):
         result = {'asm': str(self),
