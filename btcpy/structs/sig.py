@@ -173,9 +173,6 @@ class P2wshV0Solver(SegWitSolver):
     
     def has_prev_script(self):
         return True
-    
-    def solves_segwit(self):
-        return True
 
 
 class MultisigSolver(Solver):

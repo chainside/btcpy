@@ -99,7 +99,7 @@ class PublicKey(Key):
     def from_point(point, compressed=True):
         result = PublicKey(point.x().to_bytes(32, 'big') + point.y().to_bytes(32, 'big'))
         if compressed:
-            result.compress()
+            return result.compress()
         return result
 
     @staticmethod
@@ -186,7 +186,9 @@ class PublicKey(Key):
         return SegWitAddress('p2wpkh', pubk.hash(), mainnet)
 
     def compress(self):
-        self.type = 'compressed'
+        if self.type != 'uncompressed':
+            return self
+        return PublicKey(self.compressed)
 
     def __eq__(self, other):
         return (self.type, self.compressed, self.uncompressed) == (other.type, other.compressed, other.uncompressed)

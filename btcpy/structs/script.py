@@ -338,11 +338,11 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
     
     @classmethod
     def unhexlify(cls, hex_string):
-        return cls(bytearray(unhexlify(hex_string)))
+        return cls(Script(bytearray(unhexlify(hex_string))))
     
     @classmethod
     def empty(cls):
-        return cls(bytearray())
+        return cls(Script(bytearray()))
 
     @staticmethod
     def compile(string):

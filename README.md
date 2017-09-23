@@ -200,11 +200,11 @@ pubk = PrivateKey.unhexlify(privk_hex).pub()
 the `pub()` method will return by default the compressed public key.
 The uncompressed version can be obtained by adding the flag `compressed=False`.
 
-Additionally, one can make sure that a public key is considered compressed by
+Additionally, one can make sure to use the compressed version of a key by
 using its `compress()` method:
 ```python
->>> uncomp.compress()
->>> str(uncomp.to_address())
+>>> compr = uncomp.compress()
+>>> str(compr.to_address())
 'mkGY1QBotzNCrpJaEsje3BpYJsktksi3gJ'
 ```
 

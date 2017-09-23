@@ -1188,60 +1188,60 @@ class TestHD(unittest.TestCase):
 
 
 class TestBlock(unittest.TestCase):
-        def test_block_deserialize_serialize(self):
-                for i in range(len(blocks)):
-                        unhex_block = Block.unhexlify(blocks[i]['raw'])
-                        serial_block = unhex_block.serialize()
-                        self.assertEqual(blocks[i]['raw'], hexlify(serial_block).decode())
+    def test_block_deserialize_serialize(self):
+        for i in range(len(blocks)):
+            unhex_block = Block.unhexlify(blocks[i]['raw'])
+            serial_block = unhex_block.serialize()
+            self.assertEqual(blocks[i]['raw'], hexlify(serial_block).decode())
         
-        def test_block_hash(self):
-                for i in range(len(blocks)):
-                        unhex_block = Block.unhexlify(blocks[i]['raw'])
-                        self.assertEqual(blocks[i]['hash'], unhex_block.hash())
+    def test_block_hash(self):
+        for i in range(len(blocks)):
+            unhex_block = Block.unhexlify(blocks[i]['raw'])
+            self.assertEqual(blocks[i]['hash'], unhex_block.hash())
         
-        def test_block_header(self):
-                for i in range(len(blocks)):
-                        unhex_block = Block.unhexlify(blocks[i]['raw'])
-                        unhex_header = BlockHeader.unhexlify(blocks[i]['raw'])
-                        self.assertEqual(hexlify(unhex_block.header.serialize()), hexlify(unhex_header.serialize()))
+    def test_block_header(self):
+        for i in range(len(blocks)):
+            unhex_block = Block.unhexlify(blocks[i]['raw'])
+            unhex_header = BlockHeader.unhexlify(blocks[i]['raw'])
+            self.assertEqual(hexlify(unhex_block.header.serialize()), hexlify(unhex_header.serialize()))
         
-        def test_fail_block_deserialize_serialize(self):
-                for i in range(len(blocks)):
-                        unhex_block = Block.unhexlify(invalid_blocks[i]['raw'])
-                        serial_block = unhex_block.serialize()
-                        self.assertNotEqual(blocks[i]['raw'], hexlify(serial_block).decode())
+    def test_fail_block_deserialize_serialize(self):
+        for i in range(len(blocks)):
+            unhex_block = Block.unhexlify(invalid_blocks[i]['raw'])
+            serial_block = unhex_block.serialize()
+            self.assertNotEqual(blocks[i]['raw'], hexlify(serial_block).decode())
         
-        def test_fail_block_hash(self):
-                for i in range(len(blocks)):
-                        unhex_block = Block.unhexlify(invalid_blocks[i]['raw'])
-                        self.assertNotEqual(blocks[i]['hash'], unhex_block.hash())
+    def test_fail_block_hash(self):
+        for i in range(len(blocks)):
+            unhex_block = Block.unhexlify(invalid_blocks[i]['raw'])
+            self.assertNotEqual(blocks[i]['hash'], unhex_block.hash())
         
-        def test_fail_block_header(self):
-                for i in range(len(blocks)):
-                        unhex_block = Block.unhexlify(blocks[i]['raw'])
-                        unhex_header = BlockHeader.unhexlify(invalid_blocks[i]['raw'])
-                        self.assertNotEqual(hexlify(unhex_block.header.serialize()), hexlify(unhex_header.serialize()))
+    def test_fail_block_header(self):
+        for i in range(len(blocks)):
+            unhex_block = Block.unhexlify(blocks[i]['raw'])
+            unhex_header = BlockHeader.unhexlify(invalid_blocks[i]['raw'])
+            self.assertNotEqual(hexlify(unhex_block.header.serialize()), hexlify(unhex_header.serialize()))
         
-        def test_stop_iteration(self):
-                for i in range(len(short_blocks)):
-                        with self.assertRaises(StopIteration):
-                                Block.unhexlify(short_blocks[i]['raw'])
-                        with self.assertRaises(StopIteration):
-                                Block.unhexlify(short_blocks[i]['raw']).serialize()
+    def test_stop_iteration(self):
+        for i in range(len(short_blocks)):
+            with self.assertRaises(StopIteration):
+                Block.unhexlify(short_blocks[i]['raw'])
+            with self.assertRaises(StopIteration):
+                Block.unhexlify(short_blocks[i]['raw']).serialize()
         
-        def test_empty_deserialized_string(self):
-                for i in range(len(blocks)):
-                        parser = BlockParser(bytearray(unhexlify(blocks[i]['raw'])))
-                        parser.get_block_header()
-                        parser.get_txns()
-                        with self.assertRaises(StopIteration):
-                                parser >> 1
+    def test_empty_deserialized_string(self):
+        for i in range(len(blocks)):
+            parser = BlockParser(bytearray(unhexlify(blocks[i]['raw'])))
+            parser.get_block_header()
+            parser.get_txns()
+            with self.assertRaises(StopIteration):
+                parser >> 1
         
-        def test_incomplete_parsing_exception(self):
-                for i in range(len(blocks)):
-                        aug_raw = blocks[i]['raw'] + "ff"
-                        with self.assertRaises(IncompleteParsingException):
-                                Block.unhexlify(aug_raw)
+    def test_incomplete_parsing_exception(self):
+        for i in range(len(blocks)):
+            aug_raw = blocks[i]['raw'] + "ff"
+            with self.assertRaises(IncompleteParsingException):
+                Block.unhexlify(aug_raw)
 
 
 class TestTransaction(unittest.TestCase):
@@ -1259,7 +1259,7 @@ class TestTransaction(unittest.TestCase):
 
     def test_script(self):
         for key, value in scripts.items():
-            parsed_script = ScriptBuilder.identify(bytearray(unhexlify(value['hex'])))
+            parsed_script = ScriptBuilder.identify(value['hex'])
             self.assertEqual(parsed_script.hexlify(), value['hex'])
             self.assertEqual(eval(value['code']).hexlify(), value['hex'])
             self.assertEqual(parsed_script.type, value['type'])
@@ -1270,7 +1270,7 @@ class TestSegWitAddress(unittest.TestCase):
     def test_valid(self):
         for data in segwit_valid_addresses:
             address = SegWitAddress.from_string(data['address'], check_network=False)
-            script = ScriptBuilder.identify(unhexlify(data['script']))
+            script = ScriptBuilder.identify(data['script'])
             self.assertTrue(address.hash == script.address().hash)
             
     def test_invalid(self):
@@ -1372,7 +1372,7 @@ class TestPrivKey(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         from ecdsa import SigningKey, SECP256k1
         super().__init__(*args, **kwargs)
-        self.privs = [PrivateKey.from_bip32(k[1]) for k in keys]
+        self.privs = [ExtendedPrivateKey.decode(k[1], check_network=False).key for k in keys]
         self.vers = [SigningKey.from_string(p.key, curve=SECP256k1).get_verifying_key() for p in self.privs]
 
     def test_raw_sig_success(self):
@@ -1398,9 +1398,11 @@ class TestPrivKey(unittest.TestCase):
 
     def test_derivation_success(self):
         for pub, priv in keys:
-            pu = PublicKey.from_bip32(pub)
-            pr = PrivateKey.from_bip32(priv)
+            pu = ExtendedPublicKey.decode(pub, check_network=False).key
+            pr = ExtendedPrivateKey.decode(priv, check_network=False).key
             self.assertTrue(pr.pub() == pu)
+            # print('DECODED: ({}, {}, {})'.format(pu.type, hexlify(pu.compressed), hexlify(pu.uncompressed)))
+            # print('DERIVED: ({}, {}, {})'.format(pr.pub().type, hexlify(pr.pub().compressed), hexlify(pr.pub().uncompressed)))
             self.assertTrue(pr.pub().hexlify() == pu.hexlify())
 
 
@@ -1417,19 +1419,19 @@ class TestP2pk(unittest.TestCase):
 
     def test_matching_fail_leftover(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('21{}acac'.format(self.pubk)))))
+            P2pkScript.unhexlify('21{}acac'.format(self.pubk))
 
     def test_matching_fail_long_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('22{}11ac'.format(self.pubk)))))
+            P2pkScript.unhexlify('22{}11ac'.format(self.pubk))
 
     def test_matching_fail_short_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('20{}ac'.format(self.pubk[:-2])))))
+            P2pkScript.unhexlify('20{}ac'.format(self.pubk[:-2]))
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('21{}ad'.format(self.pubk)))))
+            P2pkScript.unhexlify('21{}ad'.format(self.pubk))
 
 
 class TestP2pkh(unittest.TestCase):
@@ -1460,19 +1462,19 @@ class TestP2pkh(unittest.TestCase):
 
     def test_matching_fail_leftover(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('76a914{}88acac'.format(hexlify(self.pubkh).decode())))))
+            P2pkScript.unhexlify('76a914{}88acac'.format(hexlify(self.pubkh).decode()))
 
     def test_matching_fail_long_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('79a915{}1188ac'.format(hexlify(self.pubkh).decode())))))
+            P2pkScript.unhexlify('79a915{}1188ac'.format(hexlify(self.pubkh).decode()))
 
     def test_matching_fail_short_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('79a913{}88ac'.format(hexlify(self.pubkh[:-1]).decode())))))
+            P2pkScript.unhexlify('79a913{}88ac'.format(hexlify(self.pubkh[:-1]).decode()))
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2pkScript(Script(bytearray(unhexlify('79a914{}88ad'.format(hexlify(self.pubkh).decode())))))
+            P2pkScript.unhexlify('79a914{}88ad'.format(hexlify(self.pubkh).decode()))
 
 
 class TestPwpkhScript(unittest.TestCase):
@@ -1496,19 +1498,19 @@ class TestPwpkhScript(unittest.TestCase):
 
     def test_matching_fail_leftover(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wpkhV0Script(Script(bytearray(unhexlify('0014{}aa'.format(hexlify(self.pubkh).decode())))))
+            P2wpkhV0Script.unhexlify('0014{}aa'.format(hexlify(self.pubkh).decode()))
 
     def test_matching_fail_long_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wpkhV0Script(Script(bytearray(unhexlify('0015{}aa'.format(hexlify(self.pubkh).decode())))))
+            P2wpkhV0Script.unhexlify('0015{}aa'.format(hexlify(self.pubkh).decode()))
 
     def test_matching_fail_short_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wpkhV0Script(Script(bytearray(unhexlify('0013{}'.format(hexlify(self.pubkh[:-1]).decode())))))
+            P2wpkhV0Script.unhexlify('0013{}'.format(hexlify(self.pubkh[:-1]).decode()))
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wpkhV0Script(Script(bytearray(unhexlify('0114{}'.format(hexlify(self.pubkh).decode())))))
+            P2wpkhV0Script.unhexlify('0114{}'.format(hexlify(self.pubkh).decode()))
 
 
 class TestP2sh(unittest.TestCase):
@@ -1576,15 +1578,15 @@ class TestP2sh(unittest.TestCase):
 
     def test_matching_fail_long_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2shScript(Script(bytearray(unhexlify('a9{:02x}{}aa87'.format(len(self.as_data)+1, self.as_data)))))
+            P2shScript.unhexlify('a9{:02x}{}aa87'.format(len(self.as_data)+1, self.as_data))
 
     def test_matching_fail_short_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2shScript(Script(bytearray(unhexlify('a9{:02x}{}87'.format(len(self.as_data)-1, str(self.as_data)[:-2])))))
+            P2shScript.unhexlify('a9{:02x}{}87'.format(len(self.as_data)-1, str(self.as_data)[:-2]))
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2shScript(Script(bytearray(unhexlify('a9{:02x}{}88'.format(len(self.as_data), self.as_data)))))
+            P2shScript.unhexlify('a9{:02x}{}88'.format(len(self.as_data), self.as_data))
 
 
 class TestP2wsh(unittest.TestCase):
@@ -1609,19 +1611,19 @@ class TestP2wsh(unittest.TestCase):
 
     def test_matching_fail_leftover(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wshV0Script(Script('00{:02x}{}aa'.format(len(self.as_data), self.as_data)))
+            P2wshV0Script.unhexlify('00{:02x}{}aa'.format(len(self.as_data), self.as_data))
 
     def test_matching_fail_long_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wshV0Script(Script(bytearray(unhexlify('00{:02x}{}aa'.format(len(self.as_data) + 1, self.as_data)))))
+            P2wshV0Script.unhexlify('00{:02x}{}aa'.format(len(self.as_data) + 1, self.as_data))
 
     def test_matching_fail_short_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wshV0Script(Script(bytearray(unhexlify('00{:02x}{}'.format(len(self.as_data) - 1, str(self.as_data)[:-2])))))
+            P2wshV0Script.unhexlify('00{:02x}{}'.format(len(self.as_data) - 1, str(self.as_data)[:-2]))
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2wshV0Script(Script(bytearray(unhexlify('01{:02x}{}'.format(len(self.as_data), self.as_data)))))
+            P2wshV0Script.unhexlify('01{:02x}{}'.format(len(self.as_data), self.as_data))
 
 
 class TestNulldata(unittest.TestCase):
@@ -1638,19 +1640,19 @@ class TestNulldata(unittest.TestCase):
 
     def test_matching_fail_leftover(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2shScript(Script(bytearray(unhexlify('a9{:02x}{}aa'.format(len(self.data), self.data)))))
+            P2shScript.unhexlify('a9{:02x}{}aa'.format(len(self.data), self.data))
 
     def test_matching_fail_long_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2shScript(Script(bytearray(unhexlify('a9{:02x}{}aa'.format(len(self.data)+1, self.data)))))
+            P2shScript.unhexlify('a9{:02x}{}aa'.format(len(self.data)+1, self.data))
 
     def test_matching_fail_short_push(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2shScript(Script(bytearray(unhexlify('a9{:02x}{}'.format(len(self.data)-1, str(self.data)[:-2])))))
+            P2shScript.unhexlify('a9{:02x}{}'.format(len(self.data)-1, str(self.data)[:-2]))
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            P2shScript(Script(bytearray(unhexlify('a8{:02x}{}'.format(len(self.data), self.data)))))
+            P2shScript.unhexlify('a8{:02x}{}'.format(len(self.data), self.data))
 
 
 class TestMultisig(unittest.TestCase):
@@ -1674,11 +1676,11 @@ class TestMultisig(unittest.TestCase):
 
     def test_matching_fail_leftover(self):
         with self.assertRaises(WrongScriptTypeException):
-            MultisigScript(Script(bytearray(unhexlify(self.hex_template+'aa'))))
+            MultisigScript.unhexlify(self.hex_template+'aa')
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            MultisigScript(Script(bytearray(unhexlify(self.hex_template[:-2]+'aa'))))
+            MultisigScript.unhexlify(self.hex_template[:-2]+'aa')
 
 
 class TestIf(unittest.TestCase):
@@ -1718,13 +1720,11 @@ class TestIfElse(unittest.TestCase):
 
     def test_matching_fail_leftover(self):
         with self.assertRaises(WrongScriptTypeException):
-            IfElseScript(Script(bytearray(unhexlify('63{}67{}68aa'.format(self.if_script.hexlify(),
-                                                                          self.else_script.hexlify())))))
+            IfElseScript.unhexlify('63{}67{}68aa'.format(self.if_script.hexlify(), self.else_script.hexlify()))
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            IfElseScript(Script(bytearray(unhexlify('63{}aa{}68'.format(self.if_script.hexlify(),
-                                                                        self.else_script.hexlify())))))
+            IfElseScript.unhexlify('63{}aa{}68'.format(self.if_script.hexlify(), self.else_script.hexlify()))
 
 
 class TestTimelock(unittest.TestCase):
@@ -1745,8 +1745,8 @@ class TestTimelock(unittest.TestCase):
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            TimelockScript(Script(bytearray(unhexlify('{}b1aa{}'.format(Locktime(self.locktime).for_script().hexlify(),
-                                                                        self.locked_script.hexlify())))))
+            TimelockScript.unhexlify('{}b1aa{}'.format(Locktime(self.locktime).for_script().hexlify(),
+                                                       self.locked_script.hexlify()))
 
 
 class TestRelativeTimelock(unittest.TestCase):
@@ -1767,16 +1767,8 @@ class TestRelativeTimelock(unittest.TestCase):
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            RelativeTimelockScript(
-                Script(
-                    bytearray(
-                        unhexlify('{}b2aa{}'.format(
-                            Sequence(self.sequence).for_script().hexlify(),
-                            self.locked_script.hexlify())
-                        )
-                    )
-                )
-            )
+            RelativeTimelockScript.unhexlify('{}b2aa{}'.format(Sequence(self.sequence).for_script().hexlify(),
+                                                               self.locked_script.hexlify()))
 
 
 class TestHashlock(unittest.TestCase):
@@ -1798,9 +1790,9 @@ class TestHashlock(unittest.TestCase):
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            Hashlock256Script(Script(bytearray(unhexlify('{:02x}{}a8aa{}'.format(len(self.hash),
-                                                                                 hexlify(self.hash).decode(),
-                                                                                 self.locked_script.hexlify())))))
+            Hashlock256Script.unhexlify('{:02x}{}a8aa{}'.format(len(self.hash),
+                                                                hexlify(self.hash).decode(),
+                                                                self.locked_script.hexlify()))
 
 
 class TestAddress(unittest.TestCase):

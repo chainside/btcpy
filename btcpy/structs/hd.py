@@ -233,8 +233,7 @@ class ExtendedPublicKey(ExtendedKey):
     def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
         if not isinstance(key, PublicKey):
             raise TypeError('ExtendedPublicKey expects a PublicKey')
-        key.compress()
-        super().__init__(key, chaincode, depth, pfing, index, hardened)
+        super().__init__(key.compress(), chaincode, depth, pfing, index, hardened)
 
     def __int__(self):
         return int.from_bytes(self.key.key, 'big')
