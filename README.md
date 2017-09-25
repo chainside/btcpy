@@ -60,7 +60,7 @@ this is used to communicate with the Bitcoin node in order to test transactions
 validation.
 
 # Installation
-To install this library one can just run
+To install this library and its dependencies one can just run
 
     pip install chainside-btcpy
 
@@ -238,6 +238,14 @@ to an `ExtendedPrivateKey` can be obtained through the `pub()` method.
 As seen in the example above, `ExtendedPublicKey` and `ExtendedPrivateKey`
 contain the simpler structures `PublicKey` and `PrivateKey`, respectively.
 These structures can be accessed through the `key` attribute.
+
+`ExtendedPublicKey`s also provide a `derive()` method which takes as input a string
+representing a path which either starts with `'m'` or with `'.'`. `'m'` indicates an
+absolute path and can be used only when `derive()` is called on a master key, `'.'`
+represents a relative path and can be used from any starting key. Examples of
+derivation paths:
+* `m/0'/1'/2`: absolute path, first two derivations hardened
+* `./0/128/256'`: relative path, last derivation hardened
 
 
 ## Scripts
