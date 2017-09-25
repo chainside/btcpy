@@ -97,7 +97,7 @@ class PublicKey(Key):
     
     @staticmethod
     def from_point(point, compressed=True):
-        result = PublicKey(point.x().to_bytes(32, 'big') + point.y().to_bytes(32, 'big'))
+        result = PublicKey(bytearray([0x04]) + point.x().to_bytes(32, 'big') + point.y().to_bytes(32, 'big'))
         if compressed:
             return result.compress()
         return result

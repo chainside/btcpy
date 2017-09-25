@@ -166,6 +166,14 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
                                                                         self.chaincode,
                                                                         self.key,
                                                                         self.hardened)
+    
+    def __eq__(self, other):
+        return all([self.key == other.key,
+                    self.chaincode == other.chaincode,
+                    self.depth == other.depth,
+                    self.parent_fingerprint == other.parent_fingerprint,
+                    self.index == other.index,
+                    self.hardened == other.hardened])
         
         
 class ExtendedPrivateKey(ExtendedKey):
@@ -216,7 +224,7 @@ class ExtendedPrivateKey(ExtendedKey):
                                  self.parent_fingerprint,
                                  self.index,
                                  self.hardened)
-
+        
 
 class ExtendedPublicKey(ExtendedKey):
     
@@ -243,7 +251,8 @@ class ExtendedPublicKey(ExtendedKey):
 
     def get_child(self, index, hardened=False):
         left, right = self.get_hash(index, hardened)
-        point = (left * generator_secp256k1) + VerifyingKey.from_string(self.key.uncompressed).pubkey.point
+        point = ((left * generator_secp256k1)
+                 + VerifyingKey.from_string(self.key.uncompressed[1:], curve=SECP256k1).pubkey.point)
         if point == INFINITY:
             raise ValueError('Computed point equals INFINITY')
         return ExtendedPublicKey(PublicKey.from_point(point), right, self.depth+1, self.get_fingerprint(), index, False)

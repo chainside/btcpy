@@ -1181,10 +1181,27 @@ class TestHD(unittest.TestCase):
             self.assertEqual(priv.encode(mainnet=True), data['prv'])
             self.assertEqual(pub.encode(mainnet=True), data['pub'])
             derived = masterpriv.derive(data['path'])
-            # print('DERIVED:\n{}'.format(derived))
-            # print('EXPECTED:\n{}'.format(ExtendedPrivateKey.decode(data['prv'], check_network=False)))
             self.assertEqual(derived.encode(mainnet=True), data['prv'])
             self.assertEqual(derived.pub().encode(mainnet=True), data['pub'])
+            
+    def test_priv_pub(self):
+        masterpub = ExtendedPublicKey.decode(hd_keys[0]['pub'], check_network=False)
+        masterpriv = ExtendedPublicKey.decode(hd_keys[0]['prv'], check_network=False)
+        pubs = [masterpub]
+        privs = [masterpriv]
+        paths = ['m/0/1/2147483646/2',
+                 './2147483646/0',
+                 './0/2147483647/1/2147483646/2',
+                 './156131385/44645489/4865448/4896853']
+        for path in paths:
+            newpubs = []
+            newprivs = []
+            for pub, priv in zip(pubs, privs):
+                newpubs.append(pub.derive(path))
+                newprivs.append(priv.derive(path))
+                self.assertEqual(newpubs[-1], newprivs[-1].pub())
+            pubs += newpubs
+            privs += newprivs
 
 
 class TestBlock(unittest.TestCase):
