@@ -35,7 +35,7 @@ class Codec(metaclass=ABCMeta):
 
     @classmethod
     def check_network(cls, network):
-        if network == 'mainnet' != is_mainnet():
+        if (network == 'mainnet') != is_mainnet():
             raise CouldNotDecode('Trying to parse {} address in {} environment'.format(network, net_name()))
 
 

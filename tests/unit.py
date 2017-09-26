@@ -1288,7 +1288,11 @@ class TestSegWitAddress(unittest.TestCase):
         for data in segwit_valid_addresses:
             address = SegWitAddress.from_string(data['address'], check_network=False)
             script = ScriptBuilder.identify(data['script'])
-            self.assertTrue(address.hash == script.address().hash)
+            self.assertEqual(address.hash, script.address().hash)
+            if len(data['script']) == 44:
+                self.assertEqual(P2wpkhV0Script(address), script)
+            elif len(data['script']) == 68:
+                self.assertEqual(P2wshV0Script(address), script)
             
     def test_invalid(self):
         for address in segwit_invalid_addresses:

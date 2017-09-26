@@ -65,7 +65,7 @@ class SegWitAddress(Address):
         elif self.type == 'p2wsh':
             addr_type = 'p2sh'
         else:
-            raise ValueError('SegWitAddress type does not match p2wpkh nor p2sh, {} instead'.format(self.type))
+            raise ValueError('SegWitAddress type does not match p2wpkh nor p2wsh, {} instead'.format(self.type))
         return Address(addr_type, self.hash, self.network == 'mainnet')
     
     def __eq__(self, other):

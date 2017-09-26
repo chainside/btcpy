@@ -271,10 +271,7 @@ class TestSpends(unittest.TestCase):
                       'script': NulldataScript(StackData.unhexlify('deadbeef')),
                       'solver': None,
                       'embeddable_by': {}}
-        self.preimage_streams = [Stream(TestSpends.rand_bytes()),
-                                 Stream(TestSpends.rand_bytes()),
-                                 Stream(TestSpends.rand_bytes()),
-                                 Stream(TestSpends.rand_bytes())]
+        self.preimage_streams = [Stream(TestSpends.rand_bytes())]
         self.preimages = [pre.serialize() for pre in self.preimage_streams]
         self.hashes160 = [preimage.hash160() for preimage in self.preimage_streams]
         self.hashes256 = [preimage.hash() for preimage in self.preimage_streams]

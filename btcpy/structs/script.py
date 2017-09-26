@@ -362,6 +362,9 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
 
     def __add__(self, other):
         return UnknownScript(self.body + other.body)
+    
+    def __eq__(self, other):
+        return self.body == other.body
 
     def serialize(self):
         return self.body
@@ -618,11 +621,10 @@ class P2wpkhV0Script(P2pkhScript):
 
     def __init__(self, param):
         if isinstance(param, SegWitAddress):
-            if param.type != self.type:
+            if param.type != 'p2wpkh':
                 raise ValueError('Non-p2wpkh address provided. Address type: {}'.format(param.type))
             else:
-                param = param.to_address()
-        # TODO: manage segwit addresses here
+                param = param.hash
         
         super().__init__(param)
 
@@ -703,7 +705,7 @@ class P2wshV0Script(P2shScript):
             if param.type != 'p2wsh':
                 raise ValueError('Non-p2wsh address provided. Address type: {}'.format(param.type))
             else:
-                param = param.to_address()
+                param = param.hash
                 
         super().__init__(param)
 
