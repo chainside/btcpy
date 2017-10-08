@@ -26,16 +26,24 @@ class Key(HexSerializable, metaclass=ABCMeta):
     pass
 
 
+class InvalidWifLenght(Exception):
+    '''Invalid WIF lenght.'''
+
+
 class PrivateKey(Key):
 
     highest_s = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
     @staticmethod
     def from_wif(wif):
-        drop_last = ((wif[0] in ('K', 'L') and is_mainnet()) or (wif[0] == 'c' and not is_mainnet()))
-        decoded = b58decode_check(wif)
-        decoded = decoded[1:-1] if drop_last else decoded[1:]
-        return PrivateKey(bytearray(decoded))
+        '''Decode private_key from WIF.''''
+
+        if not 51 <= len(wif) <= 52:
+            raise ValueError(InvalidWifLenght)
+
+        b58_wif = b58decode_check(wif)
+
+        return PrivateKey(bytearray(b58_wif[1:33]))
 
     @staticmethod
     def unhexlify(hexa):
