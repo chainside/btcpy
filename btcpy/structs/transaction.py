@@ -39,7 +39,7 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
                    ScriptSig(bytearray(unhexlify(dic['scriptSig']['hex']))),
                    Sequence(int(dic['sequence'])))
 
-    def __init__(self, txid: str, txout: int, script_sig: str, sequence: int, witness=None):
+    def __init__(self, txid: str, txout: int, script_sig: ScriptSig, sequence: Sequence, witness=None):
         object.__setattr__(self, 'txid', txid)
         object.__setattr__(self, 'txout', txout)
         object.__setattr__(self, 'script_sig', script_sig)
