@@ -20,6 +20,12 @@ from ..lib.parsing import Parser, TransactionParser, Stream
 
 # noinspection PyUnresolvedReferences
 class TxIn(Immutable, HexSerializable, Jsonizable):
+    '''
+    :txid, the txid of the transaction being spent
+    :txout, the output number of the output being spent
+    :script_sig, a scriptSig
+    :sequence, the sequence number of the TxIn
+    '''
 
     @classmethod
     def from_json(cls, dic):
@@ -33,7 +39,7 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
                    ScriptSig(bytearray(unhexlify(dic['scriptSig']['hex']))),
                    Sequence(int(dic['sequence'])))
 
-    def __init__(self, txid, txout, script_sig, sequence, witness=None):
+    def __init__(self, txid: str, txout: int, script_sig: str, sequence: int, witness=None):
         object.__setattr__(self, 'txid', txid)
         object.__setattr__(self, 'txout', txout)
         object.__setattr__(self, 'script_sig', script_sig)
