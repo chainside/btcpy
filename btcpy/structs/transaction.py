@@ -134,7 +134,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
 
-    def __init__(self, value, n, script_pubkey):
+    def __init__(self, value: int, n: int, script_pubkey: ScriptPubKey):
         object.__setattr__(self, 'value', value)
         object.__setattr__(self, 'n', n)
         object.__setattr__(self, 'script_pubkey', script_pubkey)
