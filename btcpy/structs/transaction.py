@@ -331,6 +331,14 @@ class Witness(Immutable, HexSerializable, Jsonizable):
 # noinspection PyUnresolvedReferences
 class Transaction(Immutable, HexSerializable, Jsonizable):
 
+    ''' assemble transaction
+    : version - tranasction version (default 1)
+    : inputs - list of tx inputs, as TxIn object
+    : outputs - list of tx outputs as TxOut object
+    : locktime - tx locktime, as Locktime object
+    : txid - default None
+    '''
+
     max_version = 2
     max_weight = 400000
 
@@ -357,12 +365,15 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
 
         return tx
 
-    def __init__(self, version, ins, outs, locktime, txid=None):
+    def __init__(self, version: int, inputs: list, outputs: list,
+                 locktime: Locktime, txid: str=None):
+
         object.__setattr__(self, 'version', version)
-        object.__setattr__(self, 'ins', tuple(ins))
-        object.__setattr__(self, 'outs', tuple(outs))
+        object.__setattr__(self, 'ins', tuple(inputs))
+        object.__setattr__(self, 'outs', tuple(outputs))
         object.__setattr__(self, 'locktime', locktime)
         object.__setattr__(self, '_txid', txid)
+
         if txid != self.txid and txid is not None:
             raise ValueError('txid {} does not match transaction data {}'.format(txid, self.hexlify()))
         # if not self.ins or not self.outs:
@@ -465,11 +476,11 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
 
     def to_mutable(self):
         return MutableTransaction(self.version, [txin.to_mutable() for txin in self.ins], self.outs, self.locktime)
-    
+
     def get_digest_preimage(self, index, prev_script, sighash=Sighash('ALL')):
-    
+
         # TODO: manage codeseparator
-    
+
         # print([str(inp) for inp in self.ins])
         # print([str(out) for out in self.outs])
         # print('Computing digest for input {}...'.format(index))
@@ -480,37 +491,37 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
             throwaway.ins[i].script_sig = ScriptSig.empty()
             if i == index:
                 throwaway.ins[i].script_sig = prev_script
-    
+
         if sighash in ('NONE', 'SINGLE'):
-        
+
             if sighash == 'NONE':
                 throwaway.outs = []
-        
+
             elif sighash == 'SINGLE':
                 if index >= len(throwaway.outs):
                     raise ValueError('TxIn index greater than number of outputs and SIGHASH_SINGLE was chosen!')
                 matching_out = throwaway.outs[index]
                 throwaway.outs = [TxOut(0xffffffffffffffff, i, ScriptPubKey.empty()) for i in range(index)]
                 throwaway.outs.append(matching_out)
-        
+
             # so that others can replace
             for i in range(len(throwaway.ins)):
                 if i != index:
                     throwaway.ins[i].sequence = Sequence(0)
-    
+
         if sighash.anyone:
             # remove all other inputs completely
             throwaway.ins = [throwaway.ins[index]]
-    
+
         to_hash = Stream()
         to_hash << throwaway
         to_hash << sighash
-    
+
         # print('SIGHASH: {}'.format(spend.sighash))
         # print(self)
-    
+
         return to_hash
-    
+
     def get_digest(self, txin, prev_script, sighash=Sighash('ALL')):
         return self.get_digest_preimage(txin, prev_script, sighash).hash()
 
