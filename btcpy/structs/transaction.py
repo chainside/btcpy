@@ -558,8 +558,8 @@ class MutableTransaction(Mutable, Transaction):
         self.outs = list(self.outs)
 
     def to_immutable(self):
-        return Transaction(self.version, [txin.to_immutable() for txin in self.ins], self.outs, self.locktime)
-    
+        return Transaction(self.version, self.timestamp, [txin.to_immutable() for txin in self.ins], self.outs, self.locktime)
+
     def to_segwit(self):
         return MutableSegWitTransaction(self.version, self.ins, self.outs, self.locktime)
     
