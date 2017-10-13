@@ -541,8 +541,9 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
 
 class MutableTransaction(Mutable, Transaction):
 
-    def __init__(self, version, ins, outs, locktime):
-        super().__init__(version, ins, outs, locktime)
+    def __init__(self, version: int, timestamp: int, ins: list, outs: list, locktime: Locktime):
+
+        super().__init__(version, timestamp, ins, outs, locktime)
         ins = []
         for txin in self.ins:
             if isinstance(txin, MutableTxIn):
