@@ -479,7 +479,9 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         return len(self.ins) == 1 and isinstance(self.ins[0], CoinBaseTxIn)
 
     def to_mutable(self):
-        return MutableTransaction(self.version, [txin.to_mutable() for txin in self.ins], self.outs, self.locktime)
+        return MutableTransaction(self.version, self.timestmap,
+                                  [txin.to_mutable() for txin in self.ins],
+                                  self.outs, self.locktime)
 
     def get_digest_preimage(self, index, prev_script, sighash=Sighash('ALL')):
 
