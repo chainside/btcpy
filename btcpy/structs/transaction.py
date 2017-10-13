@@ -19,6 +19,59 @@ from ..lib.parsing import Parser, TransactionParser, Stream
 
 
 # noinspection PyUnresolvedReferences
+class Sequence(Immutable, HexSerializable):
+
+    disable_flag_position = 31
+    type_flag_position = 22
+    MAX = 0xffffffff
+
+    @staticmethod
+    def max():
+        return Sequence(Sequence.MAX)
+
+    @staticmethod
+    def create(seq, blocks=True, disable=False):
+        if seq > 0xffff:
+            raise ValueError('Sequence value too high: {}'.format(seq))
+        flags = 0
+        if not blocks:
+            flags |= 1 << Sequence.type_flag_position
+        if disable:
+            flags |= 1 << Sequence.disable_flag_position
+        return flags + seq
+
+    def __init__(self, seq):
+        object.__setattr__(self, 'seq', seq)
+
+    @property
+    def n(self):
+        return self.seq & 0xffff
+
+    def __str__(self):
+        return str(self.seq)
+
+    def __repr__(self):
+        return 'Sequence({})'.format(self.seq)
+
+    def is_active(self):
+        return not (self.seq & (1 << Sequence.disable_flag_position))
+
+    def is_time(self):
+        return bool(self.seq & (1 << Sequence.type_flag_position))
+
+    def is_blocks(self):
+        return not self.is_time()
+
+    def for_script(self):
+        from .script import StackData
+        return StackData.from_int(self.seq)
+
+    @cached
+    def serialize(self):
+        return bytearray(self.seq.to_bytes(4, 'little'))
+
+
+# noinspection PyUnresolvedReferences
 class TxIn(Immutable, HexSerializable, Jsonizable):
     '''
     :txid, the txid of the transaction being spent
@@ -222,59 +275,6 @@ class Locktime(Immutable, HexSerializable):
 
 
 # noinspection PyUnresolvedReferences
-class Sequence(Immutable, HexSerializable):
-
-    disable_flag_position = 31
-    type_flag_position = 22
-    MAX = 0xffffffff
-
-    @staticmethod
-    def max():
-        return Sequence(Sequence.MAX)
-
-    @staticmethod
-    def create(seq, blocks=True, disable=False):
-        if seq > 0xffff:
-            raise ValueError('Sequence value too high: {}'.format(seq))
-        flags = 0
-        if not blocks:
-            flags |= 1 << Sequence.type_flag_position
-        if disable:
-            flags |= 1 << Sequence.disable_flag_position
-        return flags + seq
-
-    def __init__(self, seq):
-        object.__setattr__(self, 'seq', seq)
-
-    @property
-    def n(self):
-        return self.seq & 0xffff
-
-    def __str__(self):
-        return str(self.seq)
-
-    def __repr__(self):
-        return 'Sequence({})'.format(self.seq)
-
-    def is_active(self):
-        return not (self.seq & (1 << Sequence.disable_flag_position))
-
-    def is_time(self):
-        return bool(self.seq & (1 << Sequence.type_flag_position))
-
-    def is_blocks(self):
-        return not self.is_time()
-
-    def for_script(self):
-        from .script import StackData
-        return StackData.from_int(self.seq)
-
-    @cached
-    def serialize(self):
-        return bytearray(self.seq.to_bytes(4, 'little'))
-
-
-# noinspection PyUnresolvedReferences
 class Witness(Immutable, HexSerializable, Jsonizable):
 
     scale_factor = 4
@@ -358,6 +358,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
     def from_json(cls, tx_json):
 
         tx = cls(version=tx_json['version'],
+                 timestamp=tx_json['timestamp'],
                  locktime=Locktime(tx_json['locktime']),
                  txid=tx_json['txid'],
                  ins=[TxIn.from_json(txin_json) for txin_json in tx_json['vin']],
@@ -365,10 +366,11 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
 
         return tx
 
-    def __init__(self, version: int, inputs: list, outputs: list,
+    def __init__(self, version: int, timestamp: int, inputs: list, outputs: list,
                  locktime: Locktime, txid: str=None):
 
         object.__setattr__(self, 'version', version)
+        object.__setattr__(self, 'timestamp', timestamp)
         object.__setattr__(self, 'ins', tuple(inputs))
         object.__setattr__(self, 'outs', tuple(outputs))
         object.__setattr__(self, 'locktime', locktime)
@@ -422,6 +424,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
                 'size': self.size,
                 'vsize': self.vsize,
                 'version': self.version,
+                'timestamp': self.timestamp,
                 'locktime': self.locktime.n,
                 'vin': [txin.to_json() for txin in self.ins],
                 'vout': [txout.to_json() for txout in self.outs]}
@@ -431,6 +434,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         from itertools import chain
         result = Stream()
         result << self.version.to_bytes(4, 'little')
+        result << self.timestamp.to_bytes(4, 'little')
         result << Parser.to_varint(len(self.ins))
         # the most efficient way to flatten a list in python
         result << bytearray(chain.from_iterable(txin.serialize() for txin in self.ins))
