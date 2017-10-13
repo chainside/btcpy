@@ -40,16 +40,16 @@ class Codec(metaclass=ABCMeta):
 
 
 class Base58Codec(Codec):
-    
-    raw_prefixes = {('mainnet', 'p2pkh'): bytearray(b'\x00'),
+
+    raw_prefixes = {('mainnet', 'p2pkh'): bytearray(b'\x37'),
                     ('testnet', 'p2pkh'): bytearray(b'\x6f'),
                     ('mainnet', 'p2sh'): bytearray(b'\x05'),
                     ('testnet', 'p2sh'): bytearray(b'\xc4')}
 
-    prefixes = {'1': ('p2pkh', 'mainnet'),
+    prefixes = {'P': ('p2pkh', 'mainnet'),
                 'm': ('p2pkh', 'testnet'),
                 'n': ('p2pkh', 'testnet'),
-                '3': ('p2sh', 'mainnet'),
+                'p': ('p2sh', 'mainnet'),
                 '2': ('p2sh', 'testnet')}
 
     hash_len = 20
