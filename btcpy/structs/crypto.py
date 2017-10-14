@@ -36,7 +36,7 @@ class PrivateKey(Key):
 
     @staticmethod
     def from_wif(wif):
-        '''Decode private_key from WIF.''''
+        '''Decode private_key from WIF.'''
 
         if not 51 <= len(wif) <= 52:
             raise ValueError(InvalidWifLenght)
