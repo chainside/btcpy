@@ -479,7 +479,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         return len(self.ins) == 1 and isinstance(self.ins[0], CoinBaseTxIn)
 
     def to_mutable(self):
-        return MutableTransaction(self.version, self.timestmap,
+        return MutableTransaction(self.version, self.timestamp,
                                   [txin.to_mutable() for txin in self.ins],
                                   self.outs, self.locktime)
 
