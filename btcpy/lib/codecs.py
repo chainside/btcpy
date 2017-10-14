@@ -94,7 +94,7 @@ class Bech32Codec(Codec):
     @staticmethod
     def encode(address):
         prefix = Bech32Codec.net_to_hrp[address.network]
-        return encode(prefix, address.version, address.hash)
+        return encode(prefix, address.version, address.hash256)
     
     @staticmethod
     def decode(string, check_network=True):

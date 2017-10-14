@@ -201,3 +201,6 @@ class PublicKey(Key):
     def __eq__(self, other):
         return (self.type, self.compressed, self.uncompressed) == (other.type, other.compressed, other.uncompressed)
 
+    def __lt__(self, other):
+        return self.compressed < other.compressed
+

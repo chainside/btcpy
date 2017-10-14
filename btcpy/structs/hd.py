@@ -1,3 +1,14 @@
+# Copyright (C) 2017 chainside srl
+#
+# This file is part of the btcpy package.
+#
+# It is subject to the license terms in the LICENSE.md file found in the top-level
+# directory of this distribution.
+#
+# No part of btcpy, including this file, may be copied, modified,
+# propagated, or distributed except according to the terms contained in the
+# LICENSE.md file.
+
 import hmac
 from hashlib import sha512
 from base58 import b58decode_check, b58encode_check
@@ -267,3 +278,6 @@ class ExtendedPublicKey(ExtendedKey):
     
     def serialize_key(self):
         return self.key.compressed
+    
+    def __lt__(self, other):
+        return self.key < other.key

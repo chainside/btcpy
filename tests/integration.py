@@ -10,12 +10,13 @@
 # LICENSE.md file.
 
 
+import sys
+import copy
 import unittest
 from functools import partial
-import copy
+from argparse import ArgumentParser
 
 from regtest import Manager
-from btcpy.structs.crypto import PrivateKey, PublicKey
 from btcpy.structs.hd import ExtendedPrivateKey, ExtendedPublicKey
 from btcpy.structs.transaction import Transaction, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
 from btcpy.structs.sig import *
@@ -93,7 +94,12 @@ keys = [('tpubDHVQPtNuLdRLj7FU348D5PcrkkPj5ibhN52cfjthEH9KTfwTaVmo'
 regtest = Manager()
 regtest.generate_nodes(1)
 regtest.start_nodes()
-regtest.send_rpc_cmd(['generate', '300'], 0)
+regtest.send_rpc_cmd(['generate', '500'], 0)
+
+parser = ArgumentParser()
+parser.add_argument('--dump', dest='dumpfile')
+parser.add_argument('unittest_args', nargs='*')
+cmdline_args = parser.parse_args()
 
 
 def min_locktime(locktimes):
@@ -274,7 +280,7 @@ class TestSpends(unittest.TestCase):
         self.preimage_streams = [Stream(TestSpends.rand_bytes())]
         self.preimages = [pre.serialize() for pre in self.preimage_streams]
         self.hashes160 = [preimage.hash160() for preimage in self.preimage_streams]
-        self.hashes256 = [preimage.hash() for preimage in self.preimage_streams]
+        self.hashes256 = [preimage.hash256() for preimage in self.preimage_streams]
 
         self.all = [(s['script'],
                      (s['solver'], s['script']),
@@ -338,6 +344,74 @@ class TestSpends(unittest.TestCase):
                              (P2shSolver(script, solver), prev),
                              'p2sh({})'.format(stype)))
 
+    def get_spending_data(self, solver, state=None):
+        if state is None:
+            state = {}
+        # base case
+        if isinstance(solver, (P2pkhSolver, P2wpkhV0Solver, P2pkSolver, MultisigSolver)):
+            state['sig_hashes'] = [hexlify(sighash.as_byte()).decode() for sighash in solver.get_sighashes()]
+            if isinstance(solver, P2pkSolver):
+                state['priv_keys'] = [solver.privk.hexlify()]
+            elif isinstance(solver, P2pkhSolver):
+                state['priv_keys'] = [solver.privk.hexlify()]
+            elif isinstance(solver, P2wpkhV0Solver):
+                state['priv_keys'] = [solver.privk.hexlify()]
+            else:
+                assert isinstance(solver, MultisigSolver)
+                state['priv_keys'] = [privk.hexlify() for privk in solver.privkeys]
+            return state
+        else:
+            if isinstance(solver, HashlockSolver):
+                return self.get_spending_data(solver.inner_solver, state)
+            elif isinstance(solver, TimelockSolver):
+                return self.get_spending_data(solver.inner_solver, state)
+            elif isinstance(solver, IfElseSolver):
+                try:
+                    state['branches'].append(solver.branch.value)
+                except KeyError:
+                    state['branches'] = [solver.branch.value]
+                return self.get_spending_data(solver.inner_solver, state)
+            elif isinstance(solver, P2shSolver):
+                return self.get_spending_data(solver.redeem_script_solver, state)
+            elif isinstance(solver, P2wshV0Solver):
+                return self.get_spending_data(solver.witness_script_solver, state)
+            else:
+                assert False
+
+    def json_dump(self, unspent, spending, index, mutable_tx):
+            dump = {'script_pubkey': {'hex': unspent['txout'].script_pubkey.hexlify(),
+                                      'type': unspent['txout'].script_pubkey.type},
+                    'spend_data': {'prev_amount': unspent['txout'].value}}
+            prev_script = unspent['txout'].script_pubkey
+            if isinstance(unspent['solver'], P2shSolver):
+                dump['spend_data']['redeem_script'] = {'hex': unspent['solver'].redeem_script.hexlify(),
+                                                       'type': unspent['solver'].redeem_script.type}
+                prev_script = unspent['solver'].redeem_script
+                if isinstance(unspent['solver'].redeem_script_solver, P2wshV0Solver):
+                    dump['spend_data']['witness_script'] = {'hex': unspent['solver'].redeem_script_solver.witness_script.hexlify(),
+                                                            'type': unspent['solver'].redeem_script_solver.witness_script.type}
+                    prev_script = unspent['solver'].redeem_script_solver.witness_script
+            elif isinstance(unspent['solver'], P2wshV0Solver):
+                dump['spend_data']['witness_script'] = {'hex': unspent['solver'].witness_script.hexlify(),
+                                                        'type': unspent['solver'].witness_script.type}
+                prev_script = unspent['solver'].witness_script
+            dump['script_sig'] = spending.script_sig.hexlify()
+            if spending.witness is not None:
+                dump['witness'] = spending.witness.hexlify()
+        
+            spend_data = dict(dump['spend_data'], **self.get_spending_data(unspent['solver']))
+            dump['spend_data'] = spend_data
+            dump['digests'] = []
+            for sighash in unspent['solver'].get_sighashes():
+                if unspent['solver'].solves_segwit():
+                    dump['digests'].append(hexlify(mutable_tx.get_segwit_digest(index,
+                                                                                prev_script=prev_script,
+                                                                                prev_amount=unspent['txout'].value,
+                                                                                sighash=sighash)).decode())
+                else:
+                    dump['digests'].append(hexlify(mutable_tx.get_digest(index, prev_script, sighash=sighash)).decode())
+            return dump
+
     def test_all(self):
         global keys
         priv = ExtendedPrivateKey.decode(keys[0][1]).key
@@ -370,7 +444,7 @@ class TestSpends(unittest.TestCase):
         
         i = 0
         while i < len(self.all) - 2:
-            print('{:04d}\r'.format(i), end='')
+            print('{:04d}\r'.format(i), end='', flush=True)
             ins = [MutableTxIn(unspent['txid'], unspent['txout'].n, ScriptSig.empty(), unspent['next_seq']) for unspent in utxo]
             outs = []
             prev_types = []
@@ -380,7 +454,7 @@ class TestSpends(unittest.TestCase):
                 prev_types.append(script[2])
                 
             tx = MutableTransaction(2, ins, outs, min_locktime(unspent['next_locktime'] for unspent in utxo))
-            
+            mutable = copy.deepcopy(tx)
             tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
                 
             # print('====================')
@@ -390,19 +464,17 @@ class TestSpends(unittest.TestCase):
             # print()
             # print('raw: {}'.format(tx.hexlify()))
             # print('prev_scripts, amounts, solvers:')
-            for unspent in utxo:
-                if isinstance(unspent['solver'], P2shSolver):
-                    if isinstance(unspent['solver'].redeem_script_solver, P2wshV0Solver):
-                        prev = unspent['solver'].redeem_script_solver.witness_script
-                    else:
-                        prev = unspent['solver'].redeem_script
-                elif isinstance(unspent['solver'], P2wshV0Solver):
-                    prev = unspent['solver'].witness_script
-                else:
-                    prev = unspent['txout'].script_pubkey
-                # print(prev, unspent['txout'].value, unspent['solver'].__class__.__name__)
+
+            print('TX: {}'.format(i))
             regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
-            
+            print('Mempool size: {}'.format(len(regtest.send_rpc_cmd(['getrawmempool'], 0))))
+
+            if cmdline_args.dumpfile is not None:
+                with open(cmdline_args.dumpfile, 'a') as out:
+                    for j, unspent in enumerate(utxo):
+                        json.dump(self.json_dump(unspent, tx.ins[j], j, copy.deepcopy(mutable).to_segwit()), out)
+                        out.write('\n')
+                
             utxo = []
             
             for j, (output, prev_type) in enumerate(zip(tx.outs, prev_types)):
@@ -428,11 +500,15 @@ class TestSpends(unittest.TestCase):
                 generate = False
                 
             if not i % 10:
+                print('generating 2')
                 regtest.send_rpc_cmd(['generate', '2'], 0)
             
             i += 1
 
-        ins = [MutableTxIn(unspent['txid'], unspent['txout'].n, ScriptSig.empty(), unspent['next_seq']) for unspent in utxo]
+        ins = [MutableTxIn(unspent['txid'],
+                           unspent['txout'].n,
+                           ScriptSig.empty(),
+                           unspent['next_seq']) for unspent in utxo]
 
         tx = MutableTransaction(2,
                                 ins,
@@ -447,12 +523,13 @@ class TestSpends(unittest.TestCase):
         # print()
         # print('raw: {}'.format(tx.hexlify()))
         # print('prev_scripts, amounts, solvers:')
-        for unspent in utxo:
-            print(unspent['txout'].script_pubkey, unspent['txout'].value, unspent['solver'].__class__.__name__)
+        # for unspent in utxo:
+        #     print(unspent['txout'].script_pubkey, unspent['txout'].value, unspent['solver'].__class__.__name__)
         regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
         
         regtest.teardown()
         
 
 if __name__ == '__main__':
+    sys.argv[1:] = cmdline_args.unittest_args
     unittest.main()

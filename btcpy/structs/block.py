@@ -69,7 +69,7 @@ class Block(Immutable, Jsonizable, HexSerializable):
 
             'hash': self.hash(),
             'txn_count': len(self.txns),
-            'txns': {tx.hash() for tx in self.txns}}
+            'txns': {tx.txid for tx in self.txns}}
 
     def bits_to_diff(self):
         bits = self.header.bits

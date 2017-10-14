@@ -9,6 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE.md file.
 
+import re
 import json
 import hashlib
 from hashlib import sha256
@@ -82,6 +83,8 @@ class StackData(Immutable, HexSerializable):
         from math import ceil
         if integer == 0:
             return cls.zero()
+        if integer == -1:
+            return cls(bytearray([0x4f]))
         sign = True if integer < 0 else False
         absolute = bytearray(abs(integer).to_bytes(ceil(abs(integer).bit_length() / 8), 'little'))
         if absolute[-1] & (1 << 7):
@@ -138,7 +141,7 @@ class StackData(Immutable, HexSerializable):
                 # pushing data between 0 and 16, no further data required
                 if data:
                     raise WrongPushDataOp('Push op is OP_{} but some data was provided: {}'
-                                     .format(0 if push_op[0] == 0 else push_op[0] - 80, data))
+                                          .format(0 if push_op[0] == 0 else push_op[0] - 80, data))
             else:
                 raise WrongPushDataOp('One-byte push operation not recognized: {}'.format(push_op[0]))
         elif 76 <= push_op[0] <= 78:
@@ -168,7 +171,7 @@ class StackData(Immutable, HexSerializable):
             if self.push_op[0] == 0:
                 return ''
             else:
-                return '{:02}'.format(self.push_op[0] - 80)
+                return BaseScript.int_to_opcode[self.push_op[0]]
         return hexlify(self.data).decode()
 
     def __len__(self):
@@ -546,7 +549,6 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
     def to_stack_data(self):
         return StackData.from_bytes(self.serialize())
 
-    @cached
     def to_address(self, segwit_version=None):
         # TODO integration-test this
         if segwit_version is not None:
@@ -559,8 +561,8 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         return False
 
     def address(self):
-        """Subclasses which have a meaningful concept of address should reimplement this. Fot he moment
-        we consider to have a meaningful address onl for the following types: P2pkh, P2sh, P2wpkh, P2wsh"""
+        """Subclasses which have a meaningful concept of address should reimplement this. For the moment
+        we consider to have a meaningful address only for the following types: P2pkh, P2sh, P2wpkh, P2wsh"""
         return None
 
 
@@ -568,7 +570,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
 class P2pkhScript(ScriptPubKey):
 
     template = 'OP_DUP OP_HASH160 <20> OP_EQUALVERIFY OP_CHECKSIG'
-
+    
     compile_fmt = 'OP_DUP OP_HASH160 {} OP_EQUALVERIFY OP_CHECKSIG'
 
     def __init__(self, param):
@@ -600,14 +602,14 @@ class P2pkhScript(ScriptPubKey):
         super().__init__(self.compile(self.compile_fmt.format(hexlify(self.pubkeyhash).decode())))
 
     def __repr__(self):
-        return 'P2pkh({})'.format(hexlify(self.pubkeyhash).decode())
+        return "P2pkhScript('{}')".format(hexlify(self.pubkeyhash).decode())
 
     @property
     def type(self):
         return 'p2pkh'
 
-    def address(self):
-        return Address('p2pkh', self.pubkeyhash)
+    def address(self, mainnet=None):
+        return Address('p2pkh', self.pubkeyhash, mainnet)
 
     def is_standard(self):
         return True
@@ -629,13 +631,13 @@ class P2wpkhV0Script(P2pkhScript):
         super().__init__(param)
 
     def __repr__(self):
-        return 'P2wpkh({})'.format(hexlify(self.pubkeyhash).decode())
+        return "P2wpkhScript('{}')".format(hexlify(self.pubkeyhash).decode())
 
     @property
     def type(self):
         return 'p2wpkhv0'
 
-    def address(self):
+    def address(self, mainnet=None):
         return SegWitAddress('p2wpkh', self.pubkeyhash, 0)
 
     def get_scriptcode(self):
@@ -677,7 +679,7 @@ class P2shScript(ScriptPubKey):
         super().__init__(self.compile(self.compile_fmt.format(hexlify(self.scripthash).decode())))
 
     def __repr__(self):
-        return 'P2shScript({})'.format(hexlify(self.scripthash).decode())
+        return "P2shScript('{}')".format(hexlify(self.scripthash).decode())
 
     @property
     def type(self):
@@ -710,7 +712,7 @@ class P2wshV0Script(P2shScript):
         super().__init__(param)
 
     def __repr__(self):
-        return 'P2wshV0Script({})'.format(self.scripthash)
+        return "P2wshV0Script('{}')".format(hexlify(self.scripthash).decode())
 
     @property
     def type(self):
@@ -742,7 +744,7 @@ class P2pkScript(ScriptPubKey):
             raise TypeError('Wrong type for P2pkScript __init__: {}'.format(type(param)))
 
     def __repr__(self):
-        return 'P2pkScript({})'.format(self.pubkey)
+        return "P2pkScript('{}')".format(self.pubkey)
 
     @property
     def type(self):
@@ -774,7 +776,7 @@ class NulldataScript(ScriptPubKey):
             raise TypeError('Wrong type for NulldataScript __init__: {}'.format(type(param)))
 
     def __repr__(self):
-        return 'NulldataScript({})'.format(self.data.hexlify())
+        return "NulldataScript('{}')".format(self.data.hexlify())
 
     @property
     def type(self):
@@ -821,13 +823,15 @@ class MultisigScript(ScriptPubKey):
 
         if len(args) != 1:
             # in this case we haven't called super().__init__() yet
-            super().__init__(self.compile('{:02x} {} {:02x} '
-                                          'OP_CHECKMULTISIG'.format(self.m,
+            super().__init__(self.compile('{} {} {} '
+                                          'OP_CHECKMULTISIG'.format(StackData.from_int(self.m),
                                                                     ' '.join([pubk.hexlify() for pubk in self.pubkeys]),
-                                                                    len(self.pubkeys))))
+                                                                    StackData.from_int(len(self.pubkeys)))))
 
     def __repr__(self):
-        return 'MultisigScript({}, {}, {})'.format(self.m, ', '.join(str(pk) for pk in self.pubkeys), self.n)
+        return "MultisigScript('{}', {}, '{}')".format(self.m,
+                                                       ', '.join("'{}'".format(pk) for pk in self.pubkeys),
+                                                       self.n)
 
     @property
     def type(self):
