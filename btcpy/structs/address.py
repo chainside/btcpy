@@ -45,7 +45,7 @@ class Address(BaseAddress):
         self.hash = hashed_data
     
     def __eq__(self, other):
-        return (self.type, self.network, self.hash) == (other.type, other.network, other.hash)
+        return (self.type, self.network, self.hash) == (other.type, other.network, other.hash256)
 
 
 class SegWitAddress(Address):

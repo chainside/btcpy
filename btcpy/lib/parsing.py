@@ -342,10 +342,15 @@ class PushValidator(object):
 
 class Stream(HexSerializable):
 
+    @staticmethod
+    def unhexlify(hex_string):
+        return Stream(bytearray(unhexlify(hex_string)))
+
     def __init__(self, initial=None):
         if initial is None:
             initial = bytearray()
-        self.body = initial
+        self.body = bytearray()
+        self << initial
 
     def __lshift__(self, other):
         if isinstance(other, Serializable):
@@ -365,8 +370,16 @@ class Stream(HexSerializable):
 
     def __bool__(self):
         return bool(self.body)
+    
+    def sha256(self):
+        return bytearray(sha256(self.body).digest())
+    
+    def ripemd(self):
+        ripe = hashlib.new('ripemd160')
+        ripe.update(self.body)
+        return bytearray(ripe.digest())
 
-    def hash(self):
+    def hash256(self):
         return bytearray(sha256(sha256(self.body).digest()).digest())
 
     def hash160(self):

@@ -371,7 +371,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
     def hash(self):
         stream = Stream()
         stream << self
-        return hexlify(stream.hash()[::-1]).decode()
+        return hexlify(stream.hash256()[::-1]).decode()
 
     @property
     def txid(self):
@@ -506,7 +506,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         return to_hash
     
     def get_digest(self, txin, prev_script, sighash=Sighash('ALL')):
-        return self.get_digest_preimage(txin, prev_script, sighash).hash()
+        return self.get_digest_preimage(txin, prev_script, sighash).hash256()
 
     def __str__(self):
         return ('Transaction(version={}, '
@@ -611,7 +611,7 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
     def hash(self):
         stream = Stream()
         stream << self
-        return hexlify(stream.hash()[::-1]).decode()
+        return hexlify(stream.hash256()[::-1]).decode()
 
     def hexlify(self):
         return super().hexlify()
@@ -626,7 +626,7 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
         return self.transaction.get_digest(index, prev_script, sighash)
     
     def get_segwit_digest(self, index, prev_script, prev_amount, sighash=Sighash('ALL')):
-        return self._get_segwit_digest_preimage(index, prev_script, prev_amount, sighash).hash()
+        return self._get_segwit_digest_preimage(index, prev_script, prev_amount, sighash).hash256()
 
     def _get_segwit_digest_preimage(self, index, prev_script, prev_amount, sighash=Sighash('ALL')):
         
@@ -654,7 +654,7 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
             # hash_outputs = cache['hash_outputs']
             hash_outputs = self._hash_outputs()
         elif sighash == 'SINGLE' and index < len(self.outs):
-            hash_outputs = (Stream() << self.outs[index]).hash()
+            hash_outputs = (Stream() << self.outs[index]).hash256()
         
         if isinstance(prev_script, P2wpkhV0Script):
             script_code = prev_script.get_scriptcode()
@@ -697,19 +697,19 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
         for txin in self.ins:
             result << unhexlify(txin.txid)[::-1]
             result << txin.txout.to_bytes(4, 'little')
-        return result.hash()
+        return result.hash256()
 
     def _hash_sequence(self):
         result = Stream()
         for txin in self.ins:
             result << txin.sequence
-        return result.hash()
+        return result.hash256()
 
     def _hash_outputs(self):
         result = Stream()
         for out in self.outs:
             result << out
-        return result.hash()
+        return result.hash256()
     
     # the following properties must be redefined,
     # it does not work if one calls them on the inner transaction
