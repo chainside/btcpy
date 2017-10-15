@@ -19,7 +19,66 @@ from ..lib.parsing import Parser, TransactionParser, Stream
 
 
 # noinspection PyUnresolvedReferences
+class Sequence(Immutable, HexSerializable):
+    
+    disable_flag_position = 31
+    type_flag_position = 22
+    MAX = 0xffffffff
+    
+    @staticmethod
+    def max():
+        return Sequence(Sequence.MAX)
+    
+    @staticmethod
+    def create(seq, blocks=True, disable=False):
+        if seq > 0xffff:
+            raise ValueError('Sequence value too high: {}'.format(seq))
+        flags = 0
+        if not blocks:
+            flags |= 1 << Sequence.type_flag_position
+        if disable:
+            flags |= 1 << Sequence.disable_flag_position
+        return flags + seq
+    
+    def __init__(self, seq):
+        object.__setattr__(self, 'seq', seq)
+    
+    @property
+    def n(self):
+        return self.seq & 0xffff
+    
+    def __str__(self):
+        return str(self.seq)
+    
+    def __repr__(self):
+        return 'Sequence({})'.format(self.seq)
+    
+    def is_active(self):
+        return not (self.seq & (1 << Sequence.disable_flag_position))
+    
+    def is_time(self):
+        return bool(self.seq & (1 << Sequence.type_flag_position))
+    
+    def is_blocks(self):
+        return not self.is_time()
+    
+    def for_script(self):
+        from .script import StackData
+        return StackData.from_int(self.seq)
+    
+    @cached
+    def serialize(self):
+        return bytearray(self.seq.to_bytes(4, 'little'))
+
+
+# noinspection PyUnresolvedReferences
 class TxIn(Immutable, HexSerializable, Jsonizable):
+    """
+    :txid, the txid of the transaction being spent
+    :txout, the output number of the output being spent
+    :script_sig, a scriptSig
+    :sequence, the sequence number of the TxIn
+    """
 
     @classmethod
     def from_json(cls, dic):
@@ -33,7 +92,7 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
                    ScriptSig(bytearray(unhexlify(dic['scriptSig']['hex']))),
                    Sequence(int(dic['sequence'])))
 
-    def __init__(self, txid, txout, script_sig, sequence, witness=None):
+    def __init__(self, txid: str, txout: int, script_sig: ScriptSig, sequence: Sequence, witness=None):
         object.__setattr__(self, 'txid', txid)
         object.__setattr__(self, 'txout', txout)
         object.__setattr__(self, 'script_sig', script_sig)
@@ -128,7 +187,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
 
-    def __init__(self, value, n, script_pubkey):
+    def __init__(self, value: int, n: int, script_pubkey: ScriptPubKey):
         object.__setattr__(self, 'value', value)
         object.__setattr__(self, 'n', n)
         object.__setattr__(self, 'script_pubkey', script_pubkey)
@@ -213,59 +272,6 @@ class Locktime(Immutable, HexSerializable):
     @cached
     def serialize(self):
         return bytearray(self.n.to_bytes(4, 'little'))
-
-
-# noinspection PyUnresolvedReferences
-class Sequence(Immutable, HexSerializable):
-
-    disable_flag_position = 31
-    type_flag_position = 22
-    MAX = 0xffffffff
-
-    @staticmethod
-    def max():
-        return Sequence(Sequence.MAX)
-
-    @staticmethod
-    def create(seq, blocks=True, disable=False):
-        if seq > 0xffff:
-            raise ValueError('Sequence value too high: {}'.format(seq))
-        flags = 0
-        if not blocks:
-            flags |= 1 << Sequence.type_flag_position
-        if disable:
-            flags |= 1 << Sequence.disable_flag_position
-        return flags + seq
-
-    def __init__(self, seq):
-        object.__setattr__(self, 'seq', seq)
-
-    @property
-    def n(self):
-        return self.seq & 0xffff
-
-    def __str__(self):
-        return str(self.seq)
-
-    def __repr__(self):
-        return 'Sequence({})'.format(self.seq)
-
-    def is_active(self):
-        return not (self.seq & (1 << Sequence.disable_flag_position))
-
-    def is_time(self):
-        return bool(self.seq & (1 << Sequence.type_flag_position))
-
-    def is_blocks(self):
-        return not self.is_time()
-
-    def for_script(self):
-        from .script import StackData
-        return StackData.from_int(self.seq)
-
-    @cached
-    def serialize(self):
-        return bytearray(self.seq.to_bytes(4, 'little'))
 
 
 # noinspection PyUnresolvedReferences
