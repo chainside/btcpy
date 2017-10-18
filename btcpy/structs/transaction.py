@@ -369,13 +369,13 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
 
         return tx
 
-    def __init__(self, version: int, timestamp: int, inputs: list, outputs: list,
+    def __init__(self, version: int, timestamp: int, ins: list, outs: list,
                  locktime: Locktime, txid: str=None):
 
         object.__setattr__(self, 'version', version)
         object.__setattr__(self, 'timestamp', timestamp)
-        object.__setattr__(self, 'ins', tuple(inputs))
-        object.__setattr__(self, 'outs', tuple(outputs))
+        object.__setattr__(self, 'ins', tuple(ins))
+        object.__setattr__(self, 'outs', tuple(outs))
         object.__setattr__(self, 'locktime', locktime)
         object.__setattr__(self, '_txid', txid)
 
