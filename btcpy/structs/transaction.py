@@ -227,16 +227,19 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         if isinstance(self.script_pubkey, NulldataScript):
             return 0
 
-        size = len(self.serialize())
+        return 0.01
+        #size = len(self.serialize())
 
+        '''
         if isinstance(self.script_pubkey, (P2wpkhV0Script, P2wshV0Script)):
             # sum the sizes of the parts of a transaction input
             # with 75 % segwit discount applied to the script size.
             size += (32 + 4 + 1 + (107 // Witness.scale_factor) + 4)
         else:
             size += (32 + 4 + 1 + 107 + 4)
+        '''
 
-        return 3 * size_to_relay_fee(size)
+        #return 3 * size_to_relay_fee(size)
 
     def __str__(self):
         return "TxOut(value={}, n={}, scriptPubKey='{}')".format(self.value, self.n, self.script_pubkey)
