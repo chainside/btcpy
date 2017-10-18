@@ -361,7 +361,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
     def from_json(cls, tx_json):
 
         tx = cls(version=tx_json['version'],
-                 timestamp=tx_json['timestamp'],
+                 timestamp=tx_json['time'],
                  locktime=Locktime(tx_json['locktime']),
                  txid=tx_json['txid'],
                  ins=[TxIn.from_json(txin_json) for txin_json in tx_json['vin']],
