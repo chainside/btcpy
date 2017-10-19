@@ -653,7 +653,7 @@ class P2shScript(ScriptPubKey):
 
     def __init__(self, param):
         """
-        :param param: can be either of type `Script`, `ScriptPubKey`, `str` or `bytearray`.
+        :param param: can be either of type `Script`, `ScriptPubKey`, `Address` or `bytearray`.
         In the first case, the script is verified and the hash of the redeem script is extracted.
         In the second case, the script is built by hashing the redeem script.
         In the third case, the script is built by base58 decoding the address
