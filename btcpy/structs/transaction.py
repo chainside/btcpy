@@ -20,15 +20,15 @@ from ..lib.parsing import Parser, TransactionParser, Stream
 
 # noinspection PyUnresolvedReferences
 class Sequence(Immutable, HexSerializable):
-
+    
     disable_flag_position = 31
     type_flag_position = 22
     MAX = 0xffffffff
-
+    
     @staticmethod
     def max():
         return Sequence(Sequence.MAX)
-
+    
     @staticmethod
     def create(seq, blocks=True, disable=False):
         if seq > 0xffff:
@@ -39,33 +39,33 @@ class Sequence(Immutable, HexSerializable):
         if disable:
             flags |= 1 << Sequence.disable_flag_position
         return flags + seq
-
+    
     def __init__(self, seq):
         object.__setattr__(self, 'seq', seq)
-
+    
     @property
     def n(self):
         return self.seq & 0xffff
-
+    
     def __str__(self):
         return str(self.seq)
-
+    
     def __repr__(self):
         return 'Sequence({})'.format(self.seq)
-
+    
     def is_active(self):
         return not (self.seq & (1 << Sequence.disable_flag_position))
-
+    
     def is_time(self):
         return bool(self.seq & (1 << Sequence.type_flag_position))
-
+    
     def is_blocks(self):
         return not self.is_time()
-
+    
     def for_script(self):
         from .script import StackData
         return StackData.from_int(self.seq)
-
+    
     @cached
     def serialize(self):
         return bytearray(self.seq.to_bytes(4, 'little'))
@@ -73,12 +73,12 @@ class Sequence(Immutable, HexSerializable):
 
 # noinspection PyUnresolvedReferences
 class TxIn(Immutable, HexSerializable, Jsonizable):
-    '''
+    """
     :txid, the txid of the transaction being spent
     :txout, the output number of the output being spent
     :script_sig, a scriptSig
     :sequence, the sequence number of the TxIn
-    '''
+    """
 
     @classmethod
     def from_json(cls, dic):
