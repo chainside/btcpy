@@ -538,12 +538,12 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         return ('Transaction(version={}, '
                 'ins=[{}], '
                 'outs=[{}], '
-                'locktime={})'
-                'timestamp={}'.format(self.version,
-                                      ', '.join(str(txin) for txin in self.ins),
-                                      ', '.join(str(out) for out in self.outs),
-                                      self.locktime,
-                                      self.timestamp))
+                'locktime={}, '
+                'timestamp={} '.format(self.version,
+                                       ', '.join(str(txin) for txin in self.ins),
+                                       ', '.join(str(out) for out in self.outs),
+                                       self.locktime,
+                                       self.timestamp))
 
 
 class MutableTransaction(Mutable, Transaction):
