@@ -596,7 +596,7 @@ class TestMultisig(unittest.TestCase):
                                                       self.n + 80)
 
     def test_success(self):
-        script = MultisigScript(self.m, *self.pubkeys, self.n)
+        script = MultisigScript(self.m, *(self.pubkeys + [self.n]))
         expected = 'OP_{} {} OP_{} OP_CHECKMULTISIG'.format(self.m, ' '.join(str(pk) for pk in self.pubkeys), self.n)
         self.assertTrue(script.decompile() == expected)
         self.assertTrue(script.hexlify() == self.hex_template)
