@@ -210,9 +210,9 @@ class TransactionParser(Parser):
         if segwit:
             witness = self._witness()
             # print('witness: {}'.format([item.hexlify() for w in witness for item in w]))
-            txins = [CoinBaseTxIn(*txin_data[2:], Witness(wit))
+            txins = [CoinBaseTxIn(*txin_data[2:], witness=Witness(wit))
                      if isinstance(txin_data[2], CoinBaseScriptSig)
-                     else TxIn(*txin_data, Witness(wit))
+                     else TxIn(*txin_data, witness=Witness(wit))
                      for txin_data, wit in zip(txins_data, witness)]
         else:
             txins = [CoinBaseTxIn(*txin_data[2:])
