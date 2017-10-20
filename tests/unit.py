@@ -267,7 +267,7 @@ class TestStackData(unittest.TestCase):
 
     def test_failure(self):
         for size in self.fail_sizes:
-            with patch('btcpy.structs.script.len', return_value=size):
+            with patch('btcpy.structs.script.len', return_value=size, create=True):
                 with self.assertRaises(WrongPushDataOp):
                     StackData(bytearray([0]))
 
