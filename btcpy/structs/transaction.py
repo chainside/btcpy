@@ -183,7 +183,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
     def from_json(cls, dic):
-        return cls(int(Decimal(dic['value']) * Decimal('1e8')),
+        return cls(int(Decimal(dic['value']) * Decimal('1e6')),
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
 
@@ -207,7 +207,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         pass
 
     def to_json(self):
-        return {'value': str(Decimal(self.value) * Decimal('1e-8')),
+        return {'value': str(Decimal(self.value) * Decimal('1e6')),
                 'n': self.n,
                 'scriptPubKey': self.script_pubkey.to_json()}
 
@@ -227,16 +227,19 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         if isinstance(self.script_pubkey, NulldataScript):
             return 0
 
-        size = len(self.serialize())
+        return 0.01
+        #size = len(self.serialize())
 
+        '''
         if isinstance(self.script_pubkey, (P2wpkhV0Script, P2wshV0Script)):
             # sum the sizes of the parts of a transaction input
             # with 75 % segwit discount applied to the script size.
             size += (32 + 4 + 1 + (107 // Witness.scale_factor) + 4)
         else:
             size += (32 + 4 + 1 + 107 + 4)
+        '''
 
-        return 3 * size_to_relay_fee(size)
+        #return 3 * size_to_relay_fee(size)
 
     def __str__(self):
         return "TxOut(value={}, n={}, scriptPubKey='{}')".format(self.value, self.n, self.script_pubkey)
@@ -331,6 +334,14 @@ class Witness(Immutable, HexSerializable, Jsonizable):
 # noinspection PyUnresolvedReferences
 class Transaction(Immutable, HexSerializable, Jsonizable):
 
+    ''' assemble transaction
+    : version - tranasction version (default 1)
+    : inputs - list of tx inputs, as TxIn object
+    : outputs - list of tx outputs as TxOut object
+    : locktime - tx locktime, as Locktime object
+    : txid - default None
+    '''
+
     max_version = 2
     max_weight = 400000
 
@@ -350,6 +361,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
     def from_json(cls, tx_json):
 
         tx = cls(version=tx_json['version'],
+                 timestamp=tx_json['time'],
                  locktime=Locktime(tx_json['locktime']),
                  txid=tx_json['txid'],
                  ins=[TxIn.from_json(txin_json) for txin_json in tx_json['vin']],
@@ -357,12 +369,16 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
 
         return tx
 
-    def __init__(self, version, ins, outs, locktime, txid=None):
+    def __init__(self, version: int, timestamp: int, ins: list, outs: list,
+                 locktime: Locktime, txid: str=None):
+
         object.__setattr__(self, 'version', version)
+        object.__setattr__(self, 'timestamp', timestamp)
         object.__setattr__(self, 'ins', tuple(ins))
         object.__setattr__(self, 'outs', tuple(outs))
         object.__setattr__(self, 'locktime', locktime)
         object.__setattr__(self, '_txid', txid)
+
         if txid != self.txid and txid is not None:
             raise ValueError('txid {} does not match transaction data {}'.format(txid, self.hexlify()))
         # if not self.ins or not self.outs:
@@ -411,6 +427,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
                 'size': self.size,
                 'vsize': self.vsize,
                 'version': self.version,
+                'timestamp': self.timestamp,
                 'locktime': self.locktime.n,
                 'vin': [txin.to_json() for txin in self.ins],
                 'vout': [txout.to_json() for txout in self.outs]}
@@ -420,6 +437,7 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         from itertools import chain
         result = Stream()
         result << self.version.to_bytes(4, 'little')
+        result << self.timestamp.to_bytes(4, 'little')
         result << Parser.to_varint(len(self.ins))
         # the most efficient way to flatten a list in python
         result << bytearray(chain.from_iterable(txin.serialize() for txin in self.ins))
@@ -464,12 +482,14 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         return len(self.ins) == 1 and isinstance(self.ins[0], CoinBaseTxIn)
 
     def to_mutable(self):
-        return MutableTransaction(self.version, [txin.to_mutable() for txin in self.ins], self.outs, self.locktime)
-    
+        return MutableTransaction(self.version, self.timestamp,
+                                  [txin.to_mutable() for txin in self.ins],
+                                  self.outs, self.locktime)
+
     def get_digest_preimage(self, index, prev_script, sighash=Sighash('ALL')):
-    
+
         # TODO: manage codeseparator
-    
+
         # print([str(inp) for inp in self.ins])
         # print([str(out) for out in self.outs])
         # print('Computing digest for input {}...'.format(index))
@@ -480,37 +500,37 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
             throwaway.ins[i].script_sig = ScriptSig.empty()
             if i == index:
                 throwaway.ins[i].script_sig = prev_script
-    
+
         if sighash in ('NONE', 'SINGLE'):
-        
+
             if sighash == 'NONE':
                 throwaway.outs = []
-        
+
             elif sighash == 'SINGLE':
                 if index >= len(throwaway.outs):
                     raise ValueError('TxIn index greater than number of outputs and SIGHASH_SINGLE was chosen!')
                 matching_out = throwaway.outs[index]
                 throwaway.outs = [TxOut(0xffffffffffffffff, i, ScriptPubKey.empty()) for i in range(index)]
                 throwaway.outs.append(matching_out)
-        
+
             # so that others can replace
             for i in range(len(throwaway.ins)):
                 if i != index:
                     throwaway.ins[i].sequence = Sequence(0)
-    
+
         if sighash.anyone:
             # remove all other inputs completely
             throwaway.ins = [throwaway.ins[index]]
-    
+
         to_hash = Stream()
         to_hash << throwaway
         to_hash << sighash
-    
+
         # print('SIGHASH: {}'.format(spend.sighash))
         # print(self)
-    
+
         return to_hash
-    
+
     def get_digest(self, txin, prev_script, sighash=Sighash('ALL')):
         return self.get_digest_preimage(txin, prev_script, sighash).hash256()
 
@@ -518,16 +538,19 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         return ('Transaction(version={}, '
                 'ins=[{}], '
                 'outs=[{}], '
-                'locktime={})'.format(self.version,
-                                      ', '.join(str(txin) for txin in self.ins),
-                                      ', '.join(str(out) for out in self.outs),
-                                      self.locktime))
+                'locktime={}, '
+                'timestamp={} '.format(self.version,
+                                       ', '.join(str(txin) for txin in self.ins),
+                                       ', '.join(str(out) for out in self.outs),
+                                       self.locktime,
+                                       self.timestamp))
 
 
 class MutableTransaction(Mutable, Transaction):
 
-    def __init__(self, version, ins, outs, locktime):
-        super().__init__(version, ins, outs, locktime)
+    def __init__(self, version: int, timestamp: int, ins: list, outs: list, locktime: Locktime):
+
+        super().__init__(version, timestamp, ins, outs, locktime)
         ins = []
         for txin in self.ins:
             if isinstance(txin, MutableTxIn):
@@ -540,8 +563,8 @@ class MutableTransaction(Mutable, Transaction):
         self.outs = list(self.outs)
 
     def to_immutable(self):
-        return Transaction(self.version, [txin.to_immutable() for txin in self.ins], self.outs, self.locktime)
-    
+        return Transaction(self.version, self.timestamp, [txin.to_immutable() for txin in self.ins], self.outs, self.locktime)
+
     def to_segwit(self):
         return MutableSegWitTransaction(self.version, self.ins, self.outs, self.locktime)
     

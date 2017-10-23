@@ -135,13 +135,17 @@ class BlockParser(BlockHeaderParser):
 
 
 class TransactionParser(Parser):
-    
+
     def __init__(self, bytes_):
         super().__init__(bytes_)
         self.segwit = False
         self.txins = 0
 
     def _version(self):
+        return int.from_bytes(self >> 4, 'little')
+
+    def _timestamp(self):
+        '''get transaction timestamp (peercoin specific)'''
         return int.from_bytes(self >> 4, 'little')
 
     def _txin_data(self):
@@ -203,6 +207,7 @@ class TransactionParser(Parser):
 
         version = self._version()
         # print('version: {}'.format(version))
+        tstamp = self._timestamp()
         segwit, txins_data = self._txins_data()
         # print('txins_data: {}'.format(txins_data))
         txouts = self._txouts()
@@ -229,7 +234,8 @@ class TransactionParser(Parser):
         if segwit:
             result = SegWitTransaction(version, txins, txouts, locktime)
         else:
-            result = Transaction(version, txins, txouts, locktime)
+            result = Transaction(version, tstamp, txins, txouts, locktime)
+
         return result.to_mutable() if mutable else result
 
 

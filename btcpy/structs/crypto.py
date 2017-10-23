@@ -10,7 +10,7 @@
 # LICENSE.md file.
 
 from binascii import hexlify, unhexlify
-from base58 import b58decode_check
+from base58 import b58decode_check, b58encode_check
 from hashlib import sha256
 from ecdsa import SigningKey, SECP256k1
 from ecdsa.util import sigencode_der
@@ -26,16 +26,37 @@ class Key(HexSerializable, metaclass=ABCMeta):
     pass
 
 
+class InvalidWifLenght(Exception):
+    '''Invalid WIF lenght.'''
+
+
 class PrivateKey(Key):
 
     highest_s = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
-    @staticmethod
-    def from_wif(wif):
-        drop_last = ((wif[0] in ('K', 'L') and is_mainnet()) or (wif[0] == 'c' and not is_mainnet()))
-        decoded = b58decode_check(wif)
-        decoded = decoded[1:-1] if drop_last else decoded[1:]
-        return PrivateKey(bytearray(decoded))
+    @classmethod
+    def from_wif(self, wif: str):
+        '''Decode private_key from WIF.'''
+
+        if not 51 <= len(wif) <= 52:
+            raise ValueError(InvalidWifLenght)
+
+        b58_wif = b58decode_check(wif)
+        setattr(self, 'wif_prefix', b58_wif[0:1])
+
+        return PrivateKey(bytearray(b58_wif[1:33]))
+
+    def to_wif(self, compressed=True) -> str:
+        '''export privkey in wif format'''
+
+        extkey = self.wif_prefix + bytes(self.key)
+        if compressed:
+            extkey += b'\x01'  # correspond to a compressed public key
+        double_sha = sha256(sha256(extkey).digest()).digest()
+        extcheck = extkey + double_sha[0:4]
+        wif = b58encode_check(extcheck)
+
+        return wif
 
     @staticmethod
     def unhexlify(hexa):
