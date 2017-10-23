@@ -85,12 +85,8 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     def get_version(mainnet=None):
         raise NotImplemented
     
-    @abstractmethod
-    def serialize_key(self):
-        raise NotImplemented
-    
     def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
-        if depth > 255:
+        if not 0 <= depth <= 255:
             raise ValueError('Depth must be between 0 and 255')
         self.key = key
         self.chaincode = chaincode
@@ -131,15 +127,19 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         raise NotImplemented
     
     @abstractmethod
-    def serialized_public(self):
+    def _serialized_public(self):
+        raise NotImplemented
+
+    @abstractmethod
+    def _serialize_key(self):
         raise NotImplemented
     
     def get_hash(self, index, hardened=False):
         cls = self.__class__
         if hardened:
-            data = self.serialize_key() + (index + cls.first_hardened_index).to_bytes(4, 'big')
+            data = self._serialize_key() + (index + cls.first_hardened_index).to_bytes(4, 'big')
         else:
-            data = self.serialized_public() + index.to_bytes(4, 'big')
+            data = self._serialized_public() + index.to_bytes(4, 'big')
         h = bytearray(hmac.new(self.chaincode, data, sha512).digest())
         left, right = int.from_bytes(h[:32], 'big'), h[32:]
         if left > cls.curve_order:
@@ -165,7 +165,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         else:
             result << self.index.to_bytes(4, 'big')
         result << self.chaincode
-        result << self.serialize_key()
+        result << self._serialize_key()
         return result.serialize()
     
     def __str__(self):
@@ -222,11 +222,11 @@ class ExtendedPrivateKey(ExtendedKey):
     def get_fingerprint(self):
         return self.pub().get_fingerprint()
     
-    def serialize_key(self):
+    def _serialize_key(self):
         return bytearray([0]) + self.key.serialize()
     
-    def serialized_public(self):
-        return self.pub().serialize_key()
+    def _serialized_public(self):
+        return self.pub()._serialize_key()
     
     def pub(self):
         return ExtendedPublicKey(self.key.pub(),
@@ -273,10 +273,10 @@ class ExtendedPublicKey(ExtendedKey):
             raise ValueError('Trying to generate hardened child from public key')
         return super().get_hash(index, hardened)
     
-    def serialized_public(self):
-        return self.serialize_key()
+    def _serialized_public(self):
+        return self._serialize_key()
     
-    def serialize_key(self):
+    def _serialize_key(self):
         return self.key.compressed
     
     def __lt__(self, other):
