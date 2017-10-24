@@ -17,6 +17,19 @@ from ..setup import is_mainnet
 class BaseAddress(metaclass=ABCMeta):
     
     @staticmethod
+    def is_valid(string):
+        from ..lib.codecs import CouldNotDecode
+        try:
+            Address.from_string(string)
+            return True
+        except CouldNotDecode:
+            try:
+                SegWitAddress.from_string(string)
+                return True
+            except CouldNotDecode:
+                return False
+    
+    @staticmethod
     @abstractmethod
     def get_codec():
         raise NotImplemented
