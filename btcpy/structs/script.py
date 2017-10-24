@@ -550,7 +550,6 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         return StackData.from_bytes(self.serialize())
 
     def to_address(self, segwit_version=None):
-        # TODO integration-test this
         if segwit_version is not None:
             return SegWitAddress('p2wsh', self.p2wsh_hash(), segwit_version, is_mainnet())
         else:
@@ -644,6 +643,15 @@ class P2wpkhV0Script(P2pkhScript):
         return P2pkhScript(self.pubkeyhash).to_stack_data()
 
 
+class P2wpkhScript(ScriptPubKey, metaclass=ABCMeta):
+    
+    versions = {0: P2wpkhV0Script}
+    
+    @classmethod
+    def get(cls, segwit_version):
+        return cls.versions[segwit_version]
+
+
 # noinspection PyUnresolvedReferences
 class P2shScript(ScriptPubKey):
 
@@ -690,6 +698,9 @@ class P2shScript(ScriptPubKey):
 
     def address(self):
         return Address('p2sh', self.scripthash)
+    
+    def to_address(self, segwit_version=None):
+        return self.address()
 
 
 # noinspection PyUnresolvedReferences
@@ -720,6 +731,20 @@ class P2wshV0Script(P2shScript):
 
     def address(self):
         return Address('p2wsh', self.scripthash)
+    
+    def to_address(self, segwit_version=None):
+        if segwit_version is not None:
+            raise ValueError("Can't request p2wsh address of p2wsh script")
+        return super().to_address()
+
+
+class P2wshScript(ScriptPubKey, metaclass=ABCMeta):
+    
+    versions = {0: P2wshV0Script}
+    
+    @classmethod
+    def get(cls, segwit_version):
+        return cls.versions[segwit_version]
 
 
 # noinspection PyUnresolvedReferences
