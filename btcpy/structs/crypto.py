@@ -70,7 +70,9 @@ class PrivateKey(Key):
             decoded.append(0x01)
         return b58encode_check(bytes(decoded))
 
-    def pub(self, compressed=True):
+    def pub(self, compressed=None):
+        if compressed is None:
+            compressed = self.public_compressed
         raw_pubkey = bytearray(SigningKey.from_string(self.key, curve=SECP256k1).get_verifying_key().to_string())
         uncompressed = PublicKey(bytearray([0x04]) + raw_pubkey)
         if compressed:
