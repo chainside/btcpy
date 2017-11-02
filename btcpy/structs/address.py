@@ -15,25 +15,25 @@ from ..setup import is_mainnet
 
 
 class BaseAddress(metaclass=ABCMeta):
-    
+
     @staticmethod
-    def is_valid(string):
+    def is_valid(string, check_network=True):
         from ..lib.codecs import CouldNotDecode
         try:
-            Address.from_string(string)
+            Address.from_string(string, check_network=check_network)
             return True
         except CouldNotDecode:
             try:
-                SegWitAddress.from_string(string)
+                SegWitAddress.from_string(string, check_network=check_network)
                 return True
             except CouldNotDecode:
                 return False
-    
+
     @staticmethod
     @abstractmethod
     def get_codec():
         raise NotImplemented
-    
+
     @classmethod
     def from_string(cls, string, check_network=True):
         return cls.get_codec().decode(string, check_network)
@@ -56,18 +56,18 @@ class Address(BaseAddress):
         self.network = network
         self.type = addr_type
         self.hash = hashed_data
-    
+
     def __eq__(self, other):
         return (self.type, self.network, self.hash) == (other.type, other.network, other.hash)
 
 
 class SegWitAddress(Address):
-    
+
     @staticmethod
     def get_codec():
         from ..lib.codecs import Bech32Codec
         return Bech32Codec
-    
+
     def __init__(self, addr_type, hashed_data, version, mainnet=None):
         super().__init__(addr_type, hashed_data, mainnet)
         self.version = version
@@ -80,6 +80,6 @@ class SegWitAddress(Address):
         else:
             raise ValueError('SegWitAddress type does not match p2wpkh nor p2wsh, {} instead'.format(self.type))
         return Address(addr_type, self.hash, self.network == 'mainnet')
-    
+
     def __eq__(self, other):
         return super().__eq__(other) and self.version == other.version
