@@ -29,7 +29,7 @@ def get_data(filename):
     import os
     import json
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    with open('{}/data/{}'.format(dir_path, filename)) as infile:
+    with open('{}/data/{}.json'.format(dir_path, filename)) as infile:
         return json.load(infile)
 
 
@@ -294,6 +294,15 @@ class TestKeys(unittest.TestCase):
         m = ExtendedPrivateKey.decode(privk['master'])
         for priv, _, path in privk['derivations']:
             self.assertEqual(m.derive(path).key, PrivateKey.from_wif(priv))
+            
+    def test_to_wif(self):
+        vectors = get_data('wif')
+        for v in vectors:
+            self.assertEqual(PrivateKey.from_wif(v['wif'], check_network=False).hexlify(), v['hex'])
+            priv = PrivateKey.unhexlify(v['hex'])
+            if not v['compressed']:
+                priv.public_compressed = False
+            self.assertEqual(priv.to_wif(v['mainnet']), v['wif'])
 
 
 class TestPubkey(unittest.TestCase):

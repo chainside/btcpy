@@ -10,7 +10,7 @@
 # LICENSE.md file.
 
 from binascii import hexlify, unhexlify
-from base58 import b58decode_check
+from base58 import b58decode_check, b58encode_check
 from hashlib import sha256
 from ecdsa import SigningKey, SECP256k1
 from ecdsa.util import sigencode_der
@@ -31,18 +31,44 @@ class PrivateKey(Key):
     highest_s = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
     @staticmethod
-    def from_wif(wif):
-        drop_last = ((wif[0] in ('K', 'L') and is_mainnet()) or (wif[0] == 'c' and not is_mainnet()))
+    def from_wif(wif, check_network=True):
+
+        if not 51 <= len(wif) <= 52:
+            raise ValueError('Invalid wif length: {}'.format(len(wif)))
+
         decoded = b58decode_check(wif)
-        decoded = decoded[1:-1] if drop_last else decoded[1:]
-        return PrivateKey(bytearray(decoded))
+        prefix, *rest = decoded
+
+        if prefix not in {0x80, 0xef}:
+            raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
+
+        if check_network:
+            if prefix == 0x80 and not is_mainnet():
+                raise ValueError('Mainnet prefix in testnet environment')
+            elif prefix == 0xef and is_mainnet():
+                raise ValueError('Testnet prefix in mainnet envirnment')
+
+        public_compressed = len(rest) == 33
+        privk = rest[0:32]
+
+        return PrivateKey(bytearray(privk), public_compressed)
 
     @staticmethod
     def unhexlify(hexa):
         return PrivateKey(bytearray(unhexlify(hexa)))
 
-    def __init__(self, priv):
+    def __init__(self, priv, public_compressed=True):
         self.key = priv
+        self.public_compressed = public_compressed
+
+    def to_wif(self, mainnet=None):
+        if mainnet is None:
+            mainnet = is_mainnet()
+        prefix = bytearray([0x80]) if mainnet else bytearray([0xef])
+        decoded = prefix + self.key
+        if self.public_compressed:
+            decoded.append(0x01)
+        return b58encode_check(bytes(decoded))
 
     def pub(self, compressed=True):
         raw_pubkey = bytearray(SigningKey.from_string(self.key, curve=SECP256k1).get_verifying_key().to_string())
@@ -75,10 +101,10 @@ class PrivateKey(Key):
 
     def __eq__(self, other):
         return self.key == other.key
-    
+
     def __str__(self):
         return self.hexlify()
-    
+
 
 class WrongPubKeyFormat(Exception):
     pass
@@ -94,7 +120,7 @@ class PublicKey(Key):
              0x04: 'uncompressed'}
 
     headers = {val: key for key, val in types.items()}
-    
+
     @staticmethod
     def from_point(point, compressed=True):
         result = PublicKey(bytearray([0x04]) + point.x().to_bytes(32, 'big') + point.y().to_bytes(32, 'big'))
@@ -133,7 +159,7 @@ class PublicKey(Key):
             header, *body = pubkey
         except ValueError:
             raise WrongPubKeyFormat('Got only one byte')
-        
+
         if header == 0x04:
             if len(body) != PublicKey.uncompressed_bytes:
                 raise WrongPubKeyFormat('Unexpected length for uncompressed pubkey: {}'.format(len(body)))
@@ -167,7 +193,7 @@ class PublicKey(Key):
         ripe = hashlib.new('ripemd160')
         ripe.update(sha)
         return bytearray(ripe.digest())
-    
+
     def serialize(self):
         return self.uncompressed if self.type == 'uncompressed' else self.compressed
 
