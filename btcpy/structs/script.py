@@ -338,7 +338,7 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
     def from_json(cls, string):
         dic = json.loads(string)
         return cls(dic['hex'])
-    
+
     @classmethod
     def unhexlify(cls, hex_string):
         return cls(Script(bytearray(unhexlify(hex_string))))
@@ -365,7 +365,7 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
 
     def __add__(self, other):
         return UnknownScript(self.body + other.body)
-    
+
     def __eq__(self, other):
         return self.body == other.body
 
@@ -411,7 +411,7 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
                     sigops += Script.opcode_to_int[lastop] - 80
             lastop = op
         return sigops
-    
+
     @property
     @abstractmethod
     def type(self):
@@ -442,14 +442,14 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
 
 
 class Script(BaseScript):
-    
+
     @property
     def type(self):
         return 'Script'
 
 
 class ScriptSig(BaseScript):
-    
+
     @staticmethod
     def empty():
         return ScriptSig(bytearray())
@@ -518,7 +518,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         if len(args) == 1:
             return args[0]
         return args
-    
+
     @staticmethod
     def empty():
         return ScriptPubKey(bytearray())
@@ -569,7 +569,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
 class P2pkhScript(ScriptPubKey):
 
     template = 'OP_DUP OP_HASH160 <20> OP_EQUALVERIFY OP_CHECKSIG'
-    
+
     compile_fmt = 'OP_DUP OP_HASH160 {} OP_EQUALVERIFY OP_CHECKSIG'
 
     def __init__(self, param):
@@ -626,7 +626,7 @@ class P2wpkhV0Script(P2pkhScript):
                 raise ValueError('Non-p2wpkh address provided. Address type: {}'.format(param.type))
             else:
                 param = param.hash
-        
+
         super().__init__(param)
 
     def __repr__(self):
@@ -644,9 +644,9 @@ class P2wpkhV0Script(P2pkhScript):
 
 
 class P2wpkhScript(ScriptPubKey, metaclass=ABCMeta):
-    
+
     versions = {0: P2wpkhV0Script}
-    
+
     @classmethod
     def get(cls, segwit_version):
         return cls.versions[segwit_version]
@@ -698,7 +698,7 @@ class P2shScript(ScriptPubKey):
 
     def address(self):
         return Address('p2sh', self.scripthash)
-    
+
     def to_address(self, segwit_version=None):
         return self.address()
 
@@ -719,7 +719,7 @@ class P2wshV0Script(P2shScript):
                 raise ValueError('Non-p2wsh address provided. Address type: {}'.format(param.type))
             else:
                 param = param.hash
-                
+
         super().__init__(param)
 
     def __repr__(self):
@@ -730,18 +730,18 @@ class P2wshV0Script(P2shScript):
         return 'p2wshv0'
 
     def address(self):
-        return Address('p2wsh', self.scripthash)
-    
+        return SegWitAddress('p2wsh', self.scripthash, 0)
+
     def to_address(self, segwit_version=None):
         if segwit_version is not None:
             raise ValueError("Can't request p2wsh address of p2wsh script")
-        return super().to_address()
+        return self.address()
 
 
 class P2wshScript(ScriptPubKey, metaclass=ABCMeta):
-    
+
     versions = {0: P2wshV0Script}
-    
+
     @classmethod
     def get(cls, segwit_version):
         return cls.versions[segwit_version]
@@ -1183,7 +1183,7 @@ class UnknownScript(ScriptPubKey):
     @property
     def type(self):
         return 'nonstandard'
-    
+
     def decompile(self):
         return self.hexlify()
 
@@ -1209,7 +1209,7 @@ class ScriptBuilder(object):
 
     @staticmethod
     def identify(raw_script, inner=False, redeem=False):
-        
+
         if isinstance(raw_script, str):
             raw_script = bytearray(unhexlify(raw_script))
 
