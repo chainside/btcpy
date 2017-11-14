@@ -204,7 +204,10 @@ class StackData(Immutable, HexSerializable):
             if self.push_op[0] == 0:
                 return Parser.to_varint(0) + bytearray()
             else:
-                return Parser.to_varint(1) + bytearray([self.push_op[0] - 80])
+                if self.push_op[0] in (79, 80):
+                    return Parser.to_varint(1) + bytearray([(self.push_op[0])])
+                else:
+                    return Parser.to_varint(1) + bytearray([(self.push_op[0] - 80)])
 
 
 # noinspection PyUnresolvedReferences
@@ -527,7 +530,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         result = {'asm': str(self),
                   'hex': self.hexlify(),
                   'type': self.type}
-        if self.address is not None:
+        if self.address() is not None:
             result['address'] = str(self.address())
         return result
 
