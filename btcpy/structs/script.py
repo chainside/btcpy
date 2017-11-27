@@ -513,6 +513,8 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
     @classmethod
     def verify(cls, bytes_):
         parser = ScriptParser(bytes_)
+        if not bytes_:
+            raise WrongScriptTypeException('Empty script')
         try:
             args = [data for data in parser.match(cls.template)]
         except UnexpectedOperationFound as exc:
