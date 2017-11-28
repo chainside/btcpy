@@ -135,7 +135,7 @@ class BlockParser(BlockHeaderParser):
 
 
 class TransactionParser(Parser):
-    
+
     def __init__(self, bytes_):
         super().__init__(bytes_)
         self.segwit = False
@@ -288,7 +288,10 @@ class ScriptParser(Parser):
             return pushes
 
     def require_push(self, constraint):
-        push_data = self.get_push()
+        try:
+            push_data = self.get_push()
+        except StopIteration:
+            raise UnexpectedOperationFound('Empty push where push was required')
         validator = PushValidator(constraint)
         if not validator.check(push_data):
             raise UnexpectedOperationFound('Push operation did not pass validation constraints: {} '
@@ -370,10 +373,10 @@ class Stream(HexSerializable):
 
     def __bool__(self):
         return bool(self.body)
-    
+
     def sha256(self):
         return bytearray(sha256(self.body).digest())
-    
+
     def ripemd(self):
         ripe = hashlib.new('ripemd160')
         ripe.update(self.body)
