@@ -29,8 +29,8 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     first_hardened_index = 1 << 31
     curve_order = SECP256k1.order
     networks = {
-        'x': 'mainnet',
-        't': 'testnet',
+        'x': ['mainnet', 'litecoin', 'dashcoin'],
+        't': ['testnet'],
     }
     
     @classmethod
@@ -38,13 +38,13 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         return cls(key, chaincode, 0, cls.master_parent_fingerprint, 0, hardened=True)
     
     @classmethod
-    def decode(cls, string, check_network=False):
+    def decode(cls, string, check_network=True):
         if string[0] in cls.networks:
             network = cls.networks[string[0]]
         else:
             raise ValueError('Encoded key not recognised: {}'.format(string))
         
-        if check_network and network != net_name():
+        if check_network and net_name() in network:
             raise ValueError('Trying to decode {}mainnet key '
                              'in {}' + network + ' environment')
         
