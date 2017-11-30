@@ -20,15 +20,18 @@ from abc import ABCMeta, abstractmethod
 
 from ..lib.types import HexSerializable
 from ..lib.parsing import Stream, Parser
-from ..setup import is_mainnet
+from ..setup import is_mainnet, net_name
 from .crypto import PrivateKey, PublicKey
 
 
 class ExtendedKey(HexSerializable, metaclass=ABCMeta):
-    
-    master_parent_fingerprint = bytearray([0]*4)
+    master_parent_fingerprint = bytearray([0] * 4)
     first_hardened_index = 1 << 31
     curve_order = SECP256k1.order
+    networks = {
+        'x': ['mainnet', 'litecoin', 'dashcoin'],
+        't': ['testnet'],
+    }
     
     @classmethod
     def master(cls, key, chaincode):
@@ -36,17 +39,14 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     
     @classmethod
     def decode(cls, string, check_network=True):
-        if string[0] == 'x':
-            mainnet = True
-        elif string[0] == 't':
-            mainnet = False
+        if string[0] in cls.networks:
+            network = cls.networks[string[0]]
         else:
             raise ValueError('Encoded key not recognised: {}'.format(string))
         
-        if check_network and mainnet != is_mainnet():
+        if check_network and net_name() in network:
             raise ValueError('Trying to decode {}mainnet key '
-                             'in {}mainnet environment'.format('' if mainnet else 'non-',
-                                                               'non-' if mainnet else ''))
+                             'in {}' + network + ' environment')
         
         decoded = b58decode_check(string)
         parser = Parser(bytearray(decoded))
