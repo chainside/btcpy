@@ -15,6 +15,7 @@ from base58 import b58encode_check, b58decode_check
 from .bech32 import decode, encode
 from ..setup import is_mainnet, net_name
 from ..structs.address import Address, SegWitAddress
+from ..constants import prefixes_c, raw_prefixes_c
 
 
 class CouldNotDecode(ValueError):
@@ -39,22 +40,15 @@ class Codec(metaclass=ABCMeta):
 
     @classmethod
     def check_network(cls, network):
-        if (network == 'mainnet') != is_mainnet():
+        if network != net_name():
             raise CouldNotDecode('Trying to parse {} address in {} environment'.format(network, net_name()))
 
 
 class Base58Codec(Codec):
 
-    raw_prefixes = {('mainnet', 'p2pkh'): bytearray(b'\x00'),
-                    ('testnet', 'p2pkh'): bytearray(b'\x6f'),
-                    ('mainnet', 'p2sh'): bytearray(b'\x05'),
-                    ('testnet', 'p2sh'): bytearray(b'\xc4')}
+    raw_prefixes = raw_prefixes_c
 
-    prefixes = {'1': ('p2pkh', 'mainnet'),
-                'm': ('p2pkh', 'testnet'),
-                'n': ('p2pkh', 'testnet'),
-                '3': ('p2sh', 'mainnet'),
-                '2': ('p2sh', 'testnet')}
+    prefixes = prefixes_c()
 
     hash_len = 20
 
@@ -81,7 +75,7 @@ class Base58Codec(Codec):
         if check_network:
             Base58Codec.check_network(network)
 
-        return Address(addr_type, hashed_data, network == 'mainnet')
+        return Address(addr_type, hashed_data)
 
 
 class Bech32Codec(Codec):

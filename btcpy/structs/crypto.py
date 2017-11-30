@@ -19,7 +19,8 @@ from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import Address, SegWitAddress
-from ..setup import is_mainnet
+from ..setup import is_mainnet, net_name
+from ..constants import wif_prefixes
 
 
 class Key(HexSerializable, metaclass=ABCMeta):
@@ -39,14 +40,11 @@ class PrivateKey(Key):
         decoded = b58decode_check(wif)
         prefix, *rest = decoded
 
-        if prefix not in {0x80, 0xef}:
+        if prefix not in wif_prefixes.values():
             raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
 
-        if check_network:
-            if prefix == 0x80 and not is_mainnet():
-                raise ValueError('Mainnet prefix in testnet environment')
-            elif prefix == 0xef and is_mainnet():
-                raise ValueError('Testnet prefix in mainnet envirnment')
+        if check_network and not prefix == wif_prefixes[net_name()]:
+            raise ValueError('Bad enviroment')
 
         public_compressed = len(rest) == 33
         privk = rest[0:32]
@@ -61,10 +59,8 @@ class PrivateKey(Key):
         self.key = priv
         self.public_compressed = public_compressed
 
-    def to_wif(self, mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
-        prefix = bytearray([0x80]) if mainnet else bytearray([0xef])
+    def to_wif(self):
+        prefix = bytearray([wif_prefixes[net_name()]])
         decoded = prefix + self.key
         if self.public_compressed:
             decoded.append(0x01)
