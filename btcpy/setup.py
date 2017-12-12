@@ -8,8 +8,8 @@
 # No part of btcpy, including this file, may be copied, modified,
 # propagated, or distributed except according to the terms contained in the
 # LICENSE.md file.
+from .constants import NETWORKS
 
-networks = {'mainnet', 'testnet', 'regtest'}
 
 MAINNET = None
 NETNAME = None
@@ -19,10 +19,11 @@ def setup(network='mainnet', force=False):
     global MAINNET, NETNAME
     if MAINNET is not None and NETNAME != network and not force:
         raise ValueError('Trying to change network type at runtime')
-    if network not in networks:
+    if network not in NETWORKS:
         raise ValueError('Unknown network type: {}'.format(network))
     MAINNET = (network == 'mainnet')
     NETNAME = network
+    NETWORKS[network].init_constants()
 
 
 def is_mainnet():
