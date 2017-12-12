@@ -188,8 +188,8 @@ class ExtendedPrivateKey(ExtendedKey):
 
     @staticmethod
     def get_version(mainnet=None):
-        network = 'mainnet' if mainnet is True else mainnet
-        network = 'testnet' if mainnet is True else network
+        network = 'mainnet' if mainnet is True else None
+        network = 'testnet' if mainnet is False else network
         if network is None:
             network = net_name()
         return ExtendedPrivateKey.version_strings[network]
@@ -241,8 +241,8 @@ class ExtendedPublicKey(ExtendedKey):
 
     @staticmethod
     def get_version(mainnet=None):
-        network = 'mainnet' if mainnet is True else mainnet
-        network = 'testnet' if mainnet is True else network
+        network = 'mainnet' if mainnet is True else None
+        network = 'testnet' if mainnet is False else network
         if network is None:
             network = net_name()
         return bytearray(ExtendedPublicKey.version_strings[network])
