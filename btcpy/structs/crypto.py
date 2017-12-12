@@ -19,7 +19,7 @@ from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import Address, SegWitAddress
-from ..setup import is_mainnet, net_name
+from ..setup import net_name
 
 
 class Key(HexSerializable, metaclass=ABCMeta):
@@ -208,8 +208,6 @@ class PublicKey(Key):
         return Address('p2pkh', self.hash(), network)
 
     def to_segwit_address(self, mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
         if self.type == 'uncompressed':
             pubk = PublicKey(self.compressed)
         else:

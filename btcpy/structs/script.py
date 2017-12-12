@@ -20,7 +20,6 @@ from ..lib.types import HexSerializable, Immutable, cached
 from ..lib.parsing import ScriptParser, Parser, Stream, UnexpectedOperationFound
 from .crypto import WrongPubKeyFormat
 from .address import Address, SegWitAddress
-from ..setup import is_mainnet
 
 
 class WrongScriptTypeException(Exception):
@@ -556,7 +555,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
 
     def to_address(self, segwit_version=None):
         if segwit_version is not None:
-            return SegWitAddress('p2wsh', self.p2wsh_hash(), segwit_version, is_mainnet())
+            return SegWitAddress('p2wsh', self.p2wsh_hash(), segwit_version)
         else:
             return Address('p2sh', self.p2sh_hash())
 
