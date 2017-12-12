@@ -141,7 +141,7 @@ privk = PrivateKey.unhexlify(privk_hex)
 >>> priv.key.hexlify()
 'a12618ff6540dcd79bf68fda2faf0589b672e18b99a1ebcc32a40a67acdab608'
 >>> pub = ExtendedPublicKey.decode('tpubDHea6jyptsuZRPLydP5gCgsN194xAcPPuf6G7kHVrm16K3Grok2oTVvdkNvPM465uuKAShgba7A2hHYeGGuS9B8AQGABfc6hp7mpcLLJUsk')
-# pub.key holds a `PubicKey`
+# pub.key holds a `PublicKey`
 >>> pub.key.hexlify()
 '025f628d7a11ace2a6379119a778240cb70d6e720750416bb36f824514fbe88260'
 ```
