@@ -44,7 +44,7 @@ class PrivateKey(Key):
             raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
 
         if check_network:
-            if prefix == PrivateKey.wif_prefixes[net_name()]:
+            if prefix != PrivateKey.wif_prefixes[net_name()]:
                 raise ValueError('Prefix for wrong network using {}'.format(net_name()))
 
         public_compressed = len(rest) == 33
