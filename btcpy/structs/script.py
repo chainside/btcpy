@@ -558,7 +558,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         if segwit_version is not None:
             return SegWitAddress('p2wsh', self.p2wsh_hash(), segwit_version, is_mainnet())
         else:
-            return Address('p2sh', self.p2sh_hash(), is_mainnet())
+            return Address('p2sh', self.p2sh_hash())
 
     def is_standard(self):
         """Subclasses which have standard types should reimplement this method"""
