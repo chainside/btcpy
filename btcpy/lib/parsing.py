@@ -13,6 +13,7 @@ from binascii import hexlify, unhexlify
 from hashlib import sha256
 import hashlib
 
+from .opcodes import OpCodeConverter
 from .types import Serializable, HexSerializable
 
 
@@ -240,11 +241,10 @@ class UnexpectedOperationFound(Exception):
 class ScriptParser(Parser):
 
     def match(self, template, end=True):
-        from ..structs.script import Script
         ops = iter(template.split(' '))
         pushes = []
         for op in ops:
-            if op in Script.opcode_to_int:
+            if OpCodeConverter.exists(op):
                 self.require(op)
             elif '<' in op and '>' in op:  # push operation
                 # print('Trying to match push template: {}'.format(op))
@@ -304,7 +304,7 @@ class ScriptParser(Parser):
             next_op = next(self)
         except StopIteration:
             raise UnexpectedOperationFound('No further operation: parser reached end of script')
-        if next_op != Script.opcode_to_int[op]:
+        if next_op != OpCodeConverter.to_int(op):
             raise UnexpectedOperationFound('{} not found, found {} instead'.format(op, next_op))
 
     def require_empty(self):

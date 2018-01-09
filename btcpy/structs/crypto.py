@@ -46,7 +46,7 @@ class PrivateKey(Key):
             if prefix == 0x80 and not is_mainnet():
                 raise ValueError('Mainnet prefix in testnet environment')
             elif prefix == 0xef and is_mainnet():
-                raise ValueError('Testnet prefix in mainnet envirnment')
+                raise ValueError('Testnet prefix in mainnet environment')
 
         public_compressed = len(rest) == 33
         privk = rest[0:32]
