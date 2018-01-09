@@ -13,8 +13,12 @@ from binascii import hexlify, unhexlify
 from hashlib import sha256
 import hashlib
 
-from .opcodes import OpCodeConverter
 from .types import Serializable, HexSerializable
+from .opcodes import OpCodeConverter
+
+
+class IncompleteParsingException(ValueError):
+    pass
 
 
 class Parser(object):
@@ -37,7 +41,8 @@ class Parser(object):
         return Parser(unhexlify(hexa))
 
     def __init__(self, bytes_):
-        self.string = bytes_
+        self._string = bytes_
+        self.pointer = 0
 
     def __rshift__(self, bytes_) -> bytearray:
         """
@@ -46,20 +51,29 @@ class Parser(object):
         :param bytes_: number of bytes to shift the pointer
         :return: part of the string consumed
         """
-        if not self.string:
+        if self.pointer == len(self._string):
             raise StopIteration('Trying to shift empty string')
 
-        result = self.string[:bytes_]
-
+        result = self._string[self.pointer:self.pointer + bytes_]
         if len(result) != bytes_:
             raise StopIteration('Not enough bytes available')
 
-        self.string = self.string[bytes_:]
+        self.pointer += bytes_
 
         return result
 
+    def __lshift__(self, bytes_) -> bytearray:
+        if len(self._string) == 0:
+            raise StopIteration("Trying to shift the empty string")
+        if self.pointer - bytes_ < 0:
+            raise StopIteration("Trying to lshift before the beginning of the string")
+        self.pointer -= bytes_
+
+        result = self._string[self.pointer:self.pointer + bytes_]
+        return result
+
     def __bool__(self):
-        return bool(self.string)
+        return self.pointer < len(self._string)
 
     def __next__(self):
         return (self >> 1)[0]
@@ -68,10 +82,10 @@ class Parser(object):
         return self
 
     def __len__(self):
-        return len(self.string)
+        return len(self._string) - self.pointer
 
     def __getitem__(self, item):
-        return self.string[item]
+        return self._string[item + self.pointer]
 
     def parse_varint(self):
         header = next(self)
@@ -121,22 +135,24 @@ class BlockHeaderParser(Parser):
 
 class BlockParser(BlockHeaderParser):
     def get_txn_count(self):
+
         return self.parse_varint()
 
     def get_txns(self):
+
         txn_count = self.get_txn_count()
         counter = 0
-        txns_parser = TransactionParser(self.string)
+        txns_parser = TransactionParser(self >> len(self))
         txns = []
         for i in range(txn_count):
             txns.append(txns_parser.get_next_tx())
             counter += 1
-        self.string = txns_parser.string
+        if len(txns_parser) != 0:
+            raise IncompleteParsingException("Incomplete Block parsing, leftover data...")
         return txns
 
 
 class TransactionParser(Parser):
-
     def __init__(self, bytes_):
         super().__init__(bytes_)
         self.segwit = False
@@ -190,7 +206,8 @@ class TransactionParser(Parser):
         if self.segwit:
             witnesses = []
             for _ in range(self.txins):
-                witnesses.append([StackData.from_bytes(self >> self.parse_varint()) for _ in range(self.parse_varint())])
+                witnesses.append(
+                    [StackData.from_bytes(self >> self.parse_varint()) for _ in range(self.parse_varint())])
             return witnesses
         raise ValueError('Trying to get witness on a non-segwit transaction')
 
@@ -239,7 +256,6 @@ class UnexpectedOperationFound(Exception):
 
 
 class ScriptParser(Parser):
-
     def match(self, template, end=True):
         ops = iter(template.split(' '))
         pushes = []
@@ -278,7 +294,7 @@ class ScriptParser(Parser):
                 pushes.append(self.get_push(next_op))
         except UnexpectedOperationFound:
             # could not push, probably not a push operation, let's restore the buffer to the previous character
-            self.string = bytearray([next_op]) + self.string
+            self << 1
         except StopIteration:
             # we reached the end of the buffer
             pass
@@ -318,7 +334,6 @@ class ScriptParser(Parser):
                 curr_op = next(self)
         except StopIteration:
             raise
-        # print('Extracting StackData for op {} from {}'.format(curr_op, hexlify(self.string)))
         return StackData.from_push_op(self, curr_op)
 
 
@@ -344,7 +359,6 @@ class PushValidator(object):
 
 
 class Stream(HexSerializable):
-
     @staticmethod
     def unhexlify(hex_string):
         return Stream(bytearray(unhexlify(hex_string)))

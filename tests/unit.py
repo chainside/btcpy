@@ -21,6 +21,7 @@ from btcpy.structs.address import Address
 from btcpy.lib.codecs import CouldNotDecode
 from btcpy.setup import setup
 from btcpy.structs.hd import *
+from btcpy.lib.parsing import IncompleteParsingException
 
 setup('regtest')
 
