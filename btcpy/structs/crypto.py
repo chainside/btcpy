@@ -19,6 +19,7 @@ from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import Address, SegWitAddress
+from ..constants import NETWORKS
 from ..setup import net_name
 
 
@@ -40,11 +41,11 @@ class PrivateKey(Key):
         decoded = b58decode_check(wif)
         prefix, *rest = decoded
 
-        if prefix not in PrivateKey.wif_prefixes:
+        if prefix not in NETWORKS[net_name()].wif_prefixes.values():
             raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
 
         if check_network:
-            if prefix != PrivateKey.wif_prefixes[net_name()]:
+            if prefix != NETWORKS[net_name()].wif_prefixes[net_name()]:
                 raise ValueError('Prefix for wrong network using {}'.format(net_name()))
 
         public_compressed = len(rest) == 33
@@ -61,13 +62,14 @@ class PrivateKey(Key):
         self.public_compressed = public_compressed
 
     def to_wif(self, mainnet=None):
+        network = mainnet
         if mainnet is True:
             network = 'mainnet'
         if mainnet is False:
             network = 'testnet'
         if mainnet is None:
             network = net_name()
-        prefix = bytearray([self.wif_prefixes[network]])
+        prefix = bytearray([NETWORKS[net_name()].wif_prefixes[network]])
         decoded = prefix + self.key
         if self.public_compressed:
             decoded.append(0x01)
@@ -203,6 +205,7 @@ class PublicKey(Key):
         return self.uncompressed if self.type == 'uncompressed' else self.compressed
 
     def to_address(self, mainnet=None):
+        network = mainnet
         if mainnet is True:
             network = 'mainnet'
         if mainnet is False:

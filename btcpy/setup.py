@@ -23,7 +23,6 @@ def setup(network='mainnet', force=False):
         raise ValueError('Unknown network type: {}'.format(network))
     MAINNET = (network == 'mainnet')
     NETNAME = network
-    NETWORKS[network].init_constants()
 
 
 def is_mainnet():
@@ -37,4 +36,6 @@ def net_name():
     global NETNAME
     if NETNAME is None:
         raise ValueError('Network type not set')
+    if NETNAME == 'regtest':
+        return 'testnet'
     return NETNAME
