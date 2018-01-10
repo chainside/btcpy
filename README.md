@@ -725,13 +725,22 @@ In case one wants to sign a SegWit digest for the transaction, the following can
 >>> privk.sign(digest)
 ```
 
-# Contributing
+# Contributing and running tests
 This library has two testing tools that can be found in the `tests/` folder:
 * `unit.py`, this runs basic unit testing
-* `integration.py` this runs tests of signed transactions, to do this, transactions are signed and
+* `integration.py`, this runs tests of signed transactions, to do this, transactions are signed and
 sent to a Bitcoin Core node through the `sendrawtransaction` command.
 
-Contributors are invited to run these tests before submitting PRs. Also contributions to improve and
+To make sure these tests are using the code in the current repository and not a stale copy installed
+in a virtualenv or system wide, please make sure to run the following commands _from the root of the
+repo_:
+
+```
+python3 -m unittest tests/unit.py
+python3 -m unittest tests/integration.py
+```
+
+Contributors are invited to run these tests before submitting PRs. Also, contributions to improve and
 expand these tests are highly welcome.
 
 # TODO

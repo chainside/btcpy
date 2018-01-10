@@ -16,7 +16,7 @@ import unittest
 from functools import partial
 from argparse import ArgumentParser
 
-from regtest import Manager
+from .regtest import Manager
 from btcpy.structs.hd import ExtendedPrivateKey, ExtendedPublicKey
 from btcpy.structs.transaction import Transaction, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
 from btcpy.structs.sig import *
@@ -270,9 +270,9 @@ class TestSpends(unittest.TestCase):
                 self.sighashed_scripts.append(scriptcpy)
 
         self.scripts = self.sighashed_scripts
-        
+
         self.scripts = self.sighashed_scripts
-        
+
         self.final = {'name': 'nulldata',
                       'script': NulldataScript(StackData.unhexlify('deadbeef')),
                       'solver': None,
@@ -398,7 +398,7 @@ class TestSpends(unittest.TestCase):
             dump['script_sig'] = spending.script_sig.hexlify()
             if spending.witness is not None:
                 dump['witness'] = spending.witness.hexlify()
-        
+
             spend_data = dict(dump['spend_data'], **self.get_spending_data(unspent['solver']))
             dump['spend_data'] = spend_data
             dump['digests'] = []
@@ -418,7 +418,7 @@ class TestSpends(unittest.TestCase):
         pk = priv.pub()
         addr_string = str(pk.to_address())
         utxo = []
-        
+
         for i in range(3):
             # create 3 tx to add to UTXO
             txid = regtest.send_rpc_cmd(['sendtoaddress', addr_string, '100'], 0)
@@ -429,7 +429,7 @@ class TestSpends(unittest.TestCase):
                     txout = out
                     break
             assert txout is not None
-            
+
             utxo.append({'txid': txid,
                          'txout': txout,
                          'solver': P2pkhSolver(priv),
@@ -437,26 +437,26 @@ class TestSpends(unittest.TestCase):
                          'next_locktime': Locktime(0)})
 
         regtest.send_rpc_cmd(['generate', '100'], 0)
-        
+
         generate = False
         next_locktime = Locktime(0)
         next_sequence = Sequence.max()
-        
+
         i = 0
         while i < len(self.all) - 2:
             print('{:04d}\r'.format(i), end='', flush=True)
             ins = [MutableTxIn(unspent['txid'], unspent['txout'].n, ScriptSig.empty(), unspent['next_seq']) for unspent in utxo]
             outs = []
             prev_types = []
-            
+
             for j, (unspent, script) in enumerate(zip(utxo, self.all[i:i+3])):
                 outs.append(TxOut(unspent['txout'].value - 1000000, j, script[0]))
                 prev_types.append(script[2])
-                
+
             tx = MutableTransaction(2, ins, outs, min_locktime(unspent['next_locktime'] for unspent in utxo))
             mutable = copy.deepcopy(tx)
             tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
-                
+
             # print('====================')
             # print('txid: {}'.format(tx.txid))
             # print()
@@ -474,11 +474,11 @@ class TestSpends(unittest.TestCase):
                     for j, unspent in enumerate(utxo):
                         json.dump(self.json_dump(unspent, tx.ins[j], j, copy.deepcopy(mutable).to_segwit()), out)
                         out.write('\n')
-                
+
             utxo = []
-            
+
             for j, (output, prev_type) in enumerate(zip(tx.outs, prev_types)):
-    
+
                 if 'time' in prev_type:
                     if 'absolute' in prev_type:
                         next_locktime = Locktime(100)
@@ -489,7 +489,7 @@ class TestSpends(unittest.TestCase):
                 else:
                     next_locktime = Locktime(0)
                     next_sequence = Sequence.max()
-                    
+
                 utxo.append({'txid': tx.txid,
                              'txout': output,
                              'solver': self.all[i+j][1][0],  # solver
@@ -498,11 +498,11 @@ class TestSpends(unittest.TestCase):
             if generate:
                 regtest.send_rpc_cmd(['generate', '4'], 0)
                 generate = False
-                
+
             if not i % 10:
                 print('generating 2')
                 regtest.send_rpc_cmd(['generate', '2'], 0)
-            
+
             i += 1
 
         ins = [MutableTxIn(unspent['txid'],
@@ -515,7 +515,7 @@ class TestSpends(unittest.TestCase):
                                 [TxOut(sum(unspent['txout'].value for unspent in utxo) - 1000000, 0, self.final['script'])],
                                 min_locktime(unspent['next_locktime'] for unspent in utxo))
         tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
-        
+
         # print('====================')
         # print('txid: {}'.format(tx.txid))
         # print()
@@ -526,9 +526,9 @@ class TestSpends(unittest.TestCase):
         # for unspent in utxo:
         #     print(unspent['txout'].script_pubkey, unspent['txout'].value, unspent['solver'].__class__.__name__)
         regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
-        
+
         regtest.teardown()
-        
+
 
 if __name__ == '__main__':
     sys.argv[1:] = cmdline_args.unittest_args
