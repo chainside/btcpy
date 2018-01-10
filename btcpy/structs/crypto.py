@@ -61,9 +61,11 @@ class PrivateKey(Key):
         self.public_compressed = public_compressed
 
     def to_wif(self, mainnet=None):
-        network = 'mainnet' if mainnet is True else None
-        network = 'testnet' if mainnet is False else network
-        if network is None:
+        if mainnet is True:
+            network = 'mainnet'
+        if mainnet is False:
+            network = 'testnet'
+        if mainnet is None:
             network = net_name()
         prefix = bytearray([self.wif_prefixes[network]])
         decoded = prefix + self.key
@@ -201,9 +203,11 @@ class PublicKey(Key):
         return self.uncompressed if self.type == 'uncompressed' else self.compressed
 
     def to_address(self, mainnet=None):
-        network = 'mainnet' if mainnet is True else None
-        network = 'testnet' if mainnet is False else network
-        if network is None:
+        if mainnet is True:
+            network = 'mainnet'
+        if mainnet is False:
+            network = 'testnet'
+        if mainnet is None:
             network = net_name()
         return Address('p2pkh', self.hash(), network)
 

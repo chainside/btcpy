@@ -50,10 +50,13 @@ class Address(BaseAddress):
         return Base58Codec
 
     def __init__(self, addr_type, hashed_data, mainnet=None):
-        network = 'mainnet' if mainnet is True else None
-        network = 'testnet' if mainnet is False else network
-        if network is None:
+        if mainnet is True:
+            network = 'mainnet'
+        if mainnet is False:
+            network = 'testnet'
+        if mainnet is None:
             network = net_name()
+
         self.network = network
         self.type = addr_type
         self.hash = hashed_data
