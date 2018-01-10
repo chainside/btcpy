@@ -17,10 +17,6 @@ from ..lib.types import Immutable, Jsonizable, HexSerializable, cached
 
 
 # from .transaction import Transaction
-class IncompleteParsingException(Exception):
-    pass
-
-
 # noinspection PyUnresolvedReferences
 class Block(Immutable, Jsonizable, HexSerializable):
 
@@ -39,12 +35,7 @@ class Block(Immutable, Jsonizable, HexSerializable):
         parser = BlockParser(string)
         header = parser.get_block_header()
         txns = parser.get_txns()
-        try:
-            parser >> 1
-        except StopIteration:
-            return Block(header, txns)
-        else:
-            raise IncompleteParsingException()
+        return Block(header, txns)
 
     @cached
     def serialize(self):
@@ -86,7 +77,6 @@ class Block(Immutable, Jsonizable, HexSerializable):
 
 # noinspection PyUnresolvedReferences
 class BlockHeader(Immutable, Jsonizable, HexSerializable):
-    max_size_in_bytes = 1e6
 
     def __init__(self, version, prev_block, merkle_root, timestamp, bits, nonce):
         object.__setattr__(self, 'version', version)
