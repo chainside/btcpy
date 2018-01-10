@@ -20,15 +20,15 @@ from ..lib.parsing import Parser, TransactionParser, Stream
 
 # noinspection PyUnresolvedReferences
 class Sequence(Immutable, HexSerializable):
-    
+
     disable_flag_position = 31
     type_flag_position = 22
     MAX = 0xffffffff
-    
+
     @staticmethod
     def max():
         return Sequence(Sequence.MAX)
-    
+
     @staticmethod
     def create(seq, blocks=True, disable=False):
         if seq > 0xffff:
@@ -39,33 +39,33 @@ class Sequence(Immutable, HexSerializable):
         if disable:
             flags |= 1 << Sequence.disable_flag_position
         return flags + seq
-    
+
     def __init__(self, seq):
         object.__setattr__(self, 'seq', seq)
-    
+
     @property
     def n(self):
         return self.seq & 0xffff
-    
+
     def __str__(self):
         return str(self.seq)
-    
+
     def __repr__(self):
         return 'Sequence({})'.format(self.seq)
-    
+
     def is_active(self):
         return not (self.seq & (1 << Sequence.disable_flag_position))
-    
+
     def is_time(self):
         return bool(self.seq & (1 << Sequence.type_flag_position))
-    
+
     def is_blocks(self):
         return not self.is_time()
-    
+
     def for_script(self):
         from .script import StackData
         return StackData.from_int(self.seq)
-    
+
     @cached
     def serialize(self):
         return bytearray(self.seq.to_bytes(4, 'little'))
@@ -312,7 +312,7 @@ class Witness(Immutable, HexSerializable, Jsonizable):
     def to_script_sig(self):
         from .script import ScriptSig
         return ScriptSig.from_stack_data(self.items)
- 
+
     def is_standard(self, p2wsh=False):
         if p2wsh:
             if len(self.items[-1]) > Witness.max_redeem_script_size:
@@ -465,11 +465,11 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
 
     def to_mutable(self):
         return MutableTransaction(self.version, [txin.to_mutable() for txin in self.ins], self.outs, self.locktime)
-    
+
     def get_digest_preimage(self, index, prev_script, sighash=Sighash('ALL')):
-    
+
         # TODO: manage codeseparator
-    
+
         # print([str(inp) for inp in self.ins])
         # print([str(out) for out in self.outs])
         # print('Computing digest for input {}...'.format(index))
@@ -480,37 +480,37 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
             throwaway.ins[i].script_sig = ScriptSig.empty()
             if i == index:
                 throwaway.ins[i].script_sig = prev_script
-    
+
         if sighash in ('NONE', 'SINGLE'):
-        
+
             if sighash == 'NONE':
                 throwaway.outs = []
-        
+
             elif sighash == 'SINGLE':
                 if index >= len(throwaway.outs):
                     raise ValueError('TxIn index greater than number of outputs and SIGHASH_SINGLE was chosen!')
                 matching_out = throwaway.outs[index]
                 throwaway.outs = [TxOut(0xffffffffffffffff, i, ScriptPubKey.empty()) for i in range(index)]
                 throwaway.outs.append(matching_out)
-        
+
             # so that others can replace
             for i in range(len(throwaway.ins)):
                 if i != index:
                     throwaway.ins[i].sequence = Sequence(0)
-    
+
         if sighash.anyone:
             # remove all other inputs completely
             throwaway.ins = [throwaway.ins[index]]
-    
+
         to_hash = Stream()
         to_hash << throwaway
         to_hash << sighash
-    
+
         # print('SIGHASH: {}'.format(spend.sighash))
         # print(self)
-    
+
         return to_hash
-    
+
     def get_digest(self, txin, prev_script, sighash=Sighash('ALL')):
         return self.get_digest_preimage(txin, prev_script, sighash).hash256()
 
@@ -541,15 +541,15 @@ class MutableTransaction(Mutable, Transaction):
 
     def to_immutable(self):
         return Transaction(self.version, [txin.to_immutable() for txin in self.ins], self.outs, self.locktime)
-    
+
     def to_segwit(self):
         return MutableSegWitTransaction(self.version, self.ins, self.outs, self.locktime)
-    
+
     def spend_single(self, index, txout, solver):
-        
+
         sighashes = solver.get_sighashes()
         prev_script = solver.get_prev_script() if solver.has_prev_script() else txout.script_pubkey
-        
+
         if len(sighashes) == 0:
             script_sig, witness = solver.solve()
         elif len(sighashes) == 1:
@@ -559,12 +559,12 @@ class MutableTransaction(Mutable, Transaction):
             for sighash in sighashes:
                 digests.append(self.get_digest(index, prev_script, sighash))
             script_sig, witness = solver.solve(*digests)
-            
+
         if witness:
             raise ValueError('Trying to spend segwit output with non-segwit transaction!')
-            
+
         self.ins[index].script_sig = script_sig
-    
+
     def spend(self, txouts, solvers):
         if any(solver.solves_segwit() for solver in solvers):
             return self.to_segwit().spend(txouts, solvers)
@@ -574,7 +574,7 @@ class MutableTransaction(Mutable, Transaction):
                                                                                       len(self.ins)))
         for i, (txout, solver) in enumerate(zip(txouts, solvers)):
             self.spend_single(i, txout, solver)
-            
+
         return self.to_immutable()
 
 
@@ -630,14 +630,14 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
 
     def get_digest(self, index, prev_script, sighash=Sighash('ALL')):
         return self.transaction.get_digest(index, prev_script, sighash)
-    
+
     def get_segwit_digest(self, index, prev_script, prev_amount, sighash=Sighash('ALL')):
         return self._get_segwit_digest_preimage(index, prev_script, prev_amount, sighash).hash256()
 
     def _get_segwit_digest_preimage(self, index, prev_script, prev_amount, sighash=Sighash('ALL')):
-        
+
         # TODO reinsert partial caching to avoid quadratic hashing
-        
+
         hash_prevouts = bytearray([0] * 32)
         hash_sequence = bytearray([0] * 32)
         hash_outputs = bytearray([0] * 32)
@@ -661,7 +661,7 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
             hash_outputs = self._hash_outputs()
         elif sighash == 'SINGLE' and index < len(self.outs):
             hash_outputs = (Stream() << self.outs[index]).hash256()
-        
+
         if isinstance(prev_script, P2wpkhV0Script):
             script_code = prev_script.get_scriptcode()
         else:
@@ -716,7 +716,7 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
         for out in self.outs:
             result << out
         return result.hash256()
-    
+
     # the following properties must be redefined,
     # it does not work if one calls them on the inner transaction
     # the only difference with what is defined in Transaction
@@ -776,10 +776,10 @@ class MutableSegWitTransaction(Mutable, SegWitTransaction):
                                  self.locktime)
 
     def spend_single(self, index, txout, solver):
-    
+
         sighashes = solver.get_sighashes()
         prev_script = solver.get_prev_script() if solver.has_prev_script() else txout.script_pubkey
-    
+
         if len(sighashes) == 0:
             script_sig, witness = solver.solve()
         elif len(sighashes) == 1:
@@ -789,7 +789,7 @@ class MutableSegWitTransaction(Mutable, SegWitTransaction):
             else:
                 digest = self.get_digest(index, prev_script, sighashes[0])
                 script_sig, witness = solver.solve(digest)
-                
+
         else:
             digests = []
             if solver.solves_segwit():
@@ -802,19 +802,19 @@ class MutableSegWitTransaction(Mutable, SegWitTransaction):
                 for sighash in sighashes:
                     digests.append(self.get_digest(index, prev_script, sighash))
             script_sig, witness = solver.solve(*digests)
-    
+
         self.ins[index].script_sig = script_sig
         self.ins[index].witness = witness
 
     def spend(self, txouts, solvers):
-    
+
         if len(solvers) != len(self.ins) or len(txouts) != len(solvers):
             raise ValueError('{} solvers, {} txouts provided for {} inputs'.format(len(solvers),
                                                                                    len(txouts),
                                                                                    len(self.ins)))
-    
+
         for i, (txout, solver) in enumerate(zip(txouts, solvers)):
             self.spend_single(i, txout, solver)
-    
+
         return self.to_immutable()
 
