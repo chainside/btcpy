@@ -36,6 +36,7 @@ def get_data(filename):
 
 transactions = get_data('rawtxs')
 scripts = get_data('scripts')
+unknownscripts = get_data('unknownscripts')
 keys = get_data('xkeys')
 segwit_valid_addresses = get_data('segwit_addr_valid')
 segwit_invalid_addresses = get_data('segwit_addr_invalid')
@@ -49,6 +50,14 @@ privk = get_data('priv_addr_path')
 segsig = get_data('segwitsig')
 p2sh = get_data('p2sh')
 priv_pub_hash_addr_p2pkh_segwit = get_data('priv_pub_hash_addr_p2pkh_segwit')
+
+
+class TestUnknownScript(unittest.TestCase):
+
+    def test(self):
+        for script in unknownscripts:
+            result = ScriptBuilder.identify(unhexlify(script))
+            self.assertTrue(isinstance(result, UnknownScript))
 
 
 class TestPrivPubHashAddrP2pkhSegwit(unittest.TestCase):

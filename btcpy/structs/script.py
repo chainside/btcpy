@@ -699,6 +699,22 @@ class MultisigScript(ScriptPubKey):
 
     template = '<>+ OP_CHECKMULTISIG'
 
+    @classmethod
+    def verify(cls, bytes_):
+        from .crypto import PublicKey
+        parser = ScriptParser(bytes_)
+        if not bytes_:
+            raise WrongScriptTypeException('Empty script')
+        try:
+            m, *pubkeys, n = [data for data in parser.match(cls.template)]
+        except UnexpectedOperationFound as exc:
+            raise WrongScriptTypeException(str(exc))
+
+        if len(pubkeys) == 0 or len(pubkeys) != int(n):
+            raise WrongScriptTypeException('Non-matching N and number of pubkeys')
+
+        return [int(m), *[PublicKey(pubkey.data) for pubkey in pubkeys], int(n)]
+
     def __init__(self, *args):
         """
         :param args: if one arg is provided that is interpreted as a precompiled script which needs
@@ -706,7 +722,6 @@ class MultisigScript(ScriptPubKey):
         and `n` are extracted and saved.
         If more than one arg is provided, we assume that the parameters are `m, pubkey1, ..., pubkeyn, n`.
         """
-        from .crypto import PublicKey
 
         if len(args) == 0:
             raise TypeError('Wrong number of params for MultisigScript __init__: {}'.format(len(args)))
@@ -715,9 +730,6 @@ class MultisigScript(ScriptPubKey):
             script = args[0]
             super().__init__(script.body)
             m, *pubkeys, n = self.verify(script.body)
-            m = int(m)
-            pubkeys = [PublicKey(pk.data) for pk in pubkeys]
-            n = int(n)
         else:
             m, *pubkeys, n = args
 
