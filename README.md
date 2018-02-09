@@ -42,7 +42,7 @@ Table of Contents
          * [Multisig](#multisig)
          * [Timelocks, Hashlocks, IfElse](#timelocks-hashlocks-ifelse)
          * [Low-level signing](#low-level-signing)
-   * [Contributing](#contributing)
+   * [Contributing](#contributing-and-running-tests)
    * [TODO](#todo)
 
 # Requirements
