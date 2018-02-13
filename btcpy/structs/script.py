@@ -706,7 +706,10 @@ class MultisigScript(ScriptPubKey):
         if not bytes_:
             raise WrongScriptTypeException('Empty script')
         try:
-            m, *pubkeys, n = [data for data in parser.match(cls.template)]
+            push_ops = parser.match(cls.template)
+            if len(push_ops) <= 2:
+                raise WrongScriptTypeException('Less than 3 push ops before OP_CHECKMULTISIG')
+            m, *pubkeys, n = [data for data in push_ops]
         except UnexpectedOperationFound as exc:
             raise WrongScriptTypeException(str(exc))
 
