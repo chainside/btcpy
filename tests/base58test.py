@@ -3,7 +3,7 @@ from btcpy.lib.base58 import b58decode, b58encode
 from btcpy.lib.base58 import b58decode_check, b58encode_check
 
 
-class P2THTest(unittest.TestCase):
+class B58Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
