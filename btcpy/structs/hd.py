@@ -11,7 +11,7 @@
 
 import hmac
 from hashlib import sha512
-from base58 import b58decode_check, b58encode_check
+from ..lib.base58 import b58decode_check, b58encode_check
 from ecdsa import VerifyingKey
 from ecdsa.ellipticcurve import INFINITY
 from ecdsa.curves import SECP256k1

@@ -10,7 +10,7 @@
 # LICENSE.md file.
 
 from binascii import hexlify, unhexlify
-from base58 import b58decode_check, b58encode_check
+from ..lib.base58 import b58decode_check, b58encode_check
 from hashlib import sha256
 from ecdsa import SigningKey, SECP256k1
 from ecdsa.util import sigencode_der
