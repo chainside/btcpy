@@ -11,7 +11,7 @@
 
 from abc import ABCMeta, abstractmethod
 
-from ..setup import is_mainnet
+from ..setup import net_name
 
 
 class BaseAddress(metaclass=ABCMeta):
@@ -50,9 +50,13 @@ class Address(BaseAddress):
         return Base58Codec
 
     def __init__(self, addr_type, hashed_data, mainnet=None):
+        network = mainnet
+        if mainnet is True:
+            network = 'mainnet'
+        if mainnet is False:
+            network = 'testnet'
         if mainnet is None:
-            mainnet = is_mainnet()
-        network = 'mainnet' if mainnet else 'testnet'
+            network = net_name()
         self.network = network
         self.type = addr_type
         self.hash = hashed_data
@@ -79,7 +83,7 @@ class SegWitAddress(Address):
             addr_type = 'p2sh'
         else:
             raise ValueError('SegWitAddress type does not match p2wpkh nor p2wsh, {} instead'.format(self.type))
-        return Address(addr_type, self.hash, self.network == 'mainnet')
+        return Address(addr_type, self.hash, self.network)
 
     def __eq__(self, other):
         return super().__eq__(other) and self.version == other.version

@@ -20,7 +20,8 @@ from abc import ABCMeta, abstractmethod
 
 from ..lib.types import HexSerializable
 from ..lib.parsing import Stream, Parser
-from ..setup import is_mainnet
+from ..constants import NETWORKS
+from ..setup import net_name
 from .crypto import PrivateKey, PublicKey
 
 
@@ -36,17 +37,12 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     
     @classmethod
     def decode(cls, string, check_network=True):
-        if string[0] == 'x':
-            mainnet = True
-        elif string[0] == 't':
-            mainnet = False
-        else:
+        if string[0] not in NETWORKS[net_name()].key_prefixes:
             raise ValueError('Encoded key not recognised: {}'.format(string))
+        network = NETWORKS[net_name()].key_prefixes[string[0]]
         
-        if check_network and mainnet != is_mainnet():
-            raise ValueError('Trying to decode {}mainnet key '
-                             'in {}mainnet environment'.format('' if mainnet else 'non-',
-                                                               'non-' if mainnet else ''))
+        if check_network and network != net_name():
+            raise ValueError('Trying to decode {} key in {} environment'.format(network, net_name()))
         
         decoded = b58decode_check(string)
         parser = Parser(bytearray(decoded))
@@ -188,12 +184,18 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         
         
 class ExtendedPrivateKey(ExtendedKey):
-    
+    version_strings = None
+
     @staticmethod
     def get_version(mainnet=None):
+        network = mainnet
+        if mainnet is True:
+            network = 'mainnet'
+        if mainnet is False:
+            network = 'testnet'
         if mainnet is None:
-            mainnet = is_mainnet()
-        return bytearray(b'\x04\x88\xad\xe4') if mainnet else bytearray(b'\x04\x35\x83\x94')
+            network = net_name()
+        return bytearray(NETWORKS[net_name()].private_key_version_strings[network])
     
     @staticmethod
     def decode_key(keydata):
@@ -238,12 +240,18 @@ class ExtendedPrivateKey(ExtendedKey):
         
 
 class ExtendedPublicKey(ExtendedKey):
-    
+    version_strings = None
+
     @staticmethod
     def get_version(mainnet=None):
+        network = mainnet
+        if mainnet is True:
+            network = 'mainnet'
+        if mainnet is False:
+            network = 'testnet'
         if mainnet is None:
-            mainnet = is_mainnet()
-        return bytearray(b'\x04\x88\xb2\x1e') if mainnet else bytearray(b'\x04\x35\x87\xcf')
+            network = net_name()
+        return bytearray(NETWORKS[net_name()].public_key_version_strings[network])
     
     @staticmethod
     def decode_key(keydata):

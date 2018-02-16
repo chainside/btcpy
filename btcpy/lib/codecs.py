@@ -13,7 +13,8 @@ from abc import ABCMeta, abstractmethod
 from base58 import b58encode_check, b58decode_check
 
 from .bech32 import decode, encode
-from ..setup import is_mainnet, net_name
+from ..setup import net_name
+from ..constants import NETWORKS
 from ..structs.address import Address, SegWitAddress
 
 
@@ -39,29 +40,18 @@ class Codec(metaclass=ABCMeta):
 
     @classmethod
     def check_network(cls, network):
-        if (network == 'mainnet') != is_mainnet():
+        if network != net_name():
             raise CouldNotDecode('Trying to parse {} address in {} environment'.format(network, net_name()))
 
 
 class Base58Codec(Codec):
-
-    raw_prefixes = {('mainnet', 'p2pkh'): bytearray(b'\x00'),
-                    ('testnet', 'p2pkh'): bytearray(b'\x6f'),
-                    ('mainnet', 'p2sh'): bytearray(b'\x05'),
-                    ('testnet', 'p2sh'): bytearray(b'\xc4')}
-
-    prefixes = {'1': ('p2pkh', 'mainnet'),
-                'm': ('p2pkh', 'testnet'),
-                'n': ('p2pkh', 'testnet'),
-                '3': ('p2sh', 'mainnet'),
-                '2': ('p2sh', 'testnet')}
 
     hash_len = 20
 
     @staticmethod
     def encode(address):
         try:
-            prefix = Base58Codec.raw_prefixes[(address.network, address.type)]
+            prefix = NETWORKS[net_name()].raw_prefixes[(address.network, address.type)]
         except KeyError:
             raise CouldNotEncode('Impossible to encode address type: {}, network: {}'.format(address.type,
                                                                                              address.network))
@@ -70,7 +60,7 @@ class Base58Codec(Codec):
     @staticmethod
     def decode(string, check_network=True):
         try:
-            addr_type, network = Base58Codec.prefixes[string[0]]
+            addr_type, network = NETWORKS[net_name()].prefixes[string[0]]
         except KeyError:
             raise CouldNotDecode('Impossible to decode address {}'.format(string))
         hashed_data = bytearray(b58decode_check(string))[1:]
@@ -81,23 +71,17 @@ class Base58Codec(Codec):
         if check_network:
             Base58Codec.check_network(network)
 
-        return Address(addr_type, hashed_data, network == 'mainnet')
+        return Address(addr_type, hashed_data, network)
 
 
 class Bech32Codec(Codec):
-
-    net_to_hrp = {'mainnet': 'bc',
-                  'testnet': 'tb'}
-
-    hrp_to_net = {'bc': 'mainnet',
-                  'tb': 'testnet'}
 
     lengths = {42: 'p2wpkh',
                62: 'p2wsh'}
 
     @staticmethod
     def encode(address):
-        prefix = Bech32Codec.net_to_hrp[address.network]
+        prefix = NETWORKS[net_name()].net_to_hrp[address.network]
         return encode(prefix, address.version, address.hash)
 
     @staticmethod
@@ -112,7 +96,7 @@ class Bech32Codec(Codec):
 
         string = string.lower()
         try:
-            network = Bech32Codec.hrp_to_net[string[:2]]
+            network = NETWORKS[net_name()].hrp_to_net[string[:2]]
             addr_type = Bech32Codec.lengths[len(string)]
         except KeyError:
             raise CouldNotDecode('Impossible to decode address {}'.format(string))
