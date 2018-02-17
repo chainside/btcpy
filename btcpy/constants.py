@@ -36,7 +36,3 @@ class BitcoinConstants(Constants):
 
     private_key_version_strings = {'mainnet': b'\x04\x88\xad\xe4', 'testnet': b'\x04\x35\x83\x94'}
 
-
-NETWORKS = {'mainnet': BitcoinConstants(),
-            'testnet': BitcoinConstants(),
-            'regtest': BitcoinConstants()}

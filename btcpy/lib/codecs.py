@@ -14,7 +14,7 @@ from base58 import b58encode_check, b58decode_check
 
 from .bech32 import decode, encode
 from ..setup import net_name
-from ..constants import NETWORKS
+from ..setup import NETWORKS
 from ..structs.address import Address, SegWitAddress
 
 

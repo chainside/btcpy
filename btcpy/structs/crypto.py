@@ -19,7 +19,7 @@ from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import Address, SegWitAddress
-from ..constants import NETWORKS
+from ..setup import NETWORKS
 from ..setup import net_name
 
 
