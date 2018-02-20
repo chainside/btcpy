@@ -21,6 +21,8 @@ from btcpy.structs.address import Address
 from btcpy.lib.codecs import CouldNotDecode
 from btcpy.setup import setup
 from btcpy.structs.hd import *
+from btcpy.lib.base58 import b58decode, b58encode
+from btcpy.lib.base58 import b58decode_check, b58encode_check
 from btcpy.lib.parsing import IncompleteParsingException
 
 setup('regtest')
@@ -50,6 +52,27 @@ privk = get_data('priv_addr_path')
 segsig = get_data('segwitsig')
 p2sh = get_data('p2sh')
 priv_pub_hash_addr_p2pkh_segwit = get_data('priv_pub_hash_addr_p2pkh_segwit')
+b58 = get_data('base58')
+b58chk = get_data('base58_check')
+
+
+class B58Test(unittest.TestCase):
+
+    def test_b58encode(self):
+        for hexa, encoded in b58:
+            self.assertEqual(b58encode(unhexlify(hexa)), encoded)
+
+    def test_b58encode_check(self):
+        for hexa, encoded in b58chk:
+            self.assertEqual(b58encode_check(unhexlify(hexa)), encoded)
+
+    def test_b58decode(self):
+        for hexa, encoded in b58:
+            self.assertEqual(hexlify(b58decode(encoded)).decode(), hexa)
+
+    def test_b58decode_check(self):
+        for hexa, encoded in b58chk:
+            self.assertEqual(hexlify(b58decode_check(encoded)).decode(), hexa)
 
 
 class TestUnknownScript(unittest.TestCase):
