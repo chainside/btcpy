@@ -10,7 +10,7 @@
 # LICENSE.md file.
 
 from abc import ABCMeta, abstractmethod
-from base58 import b58encode_check, b58decode_check
+from .base58 import b58encode_check, b58decode_check
 
 from .bech32 import decode, encode
 from ..setup import is_mainnet, net_name
