@@ -220,14 +220,10 @@ class TransactionParser(Parser):
         from ..structs.transaction import (CoinBaseTxIn, Witness, TxIn, SegWitTransaction, Transaction)
 
         version = self._version()
-        # print('version: {}'.format(version))
         segwit, txins_data = self._txins_data()
-        # print('txins_data: {}'.format(txins_data))
         txouts = self._txouts()
-        # print('txouts: {}'.format(txouts))
         if segwit:
             witness = self._witness()
-            # print('witness: {}'.format([item.hexlify() for w in witness for item in w]))
             txins = [CoinBaseTxIn(*txin_data[2:], witness=Witness(wit))
                      if isinstance(txin_data[2], CoinBaseScriptSig)
                      else TxIn(*txin_data, witness=Witness(wit))
@@ -239,7 +235,6 @@ class TransactionParser(Parser):
                      for txin_data in txins_data]
 
         locktime = self._locktime()
-        # print('locktime: {}'.format(locktime))
 
         if len(txins) > 1 and isinstance(txins[0], CoinBaseTxIn):
             raise ValueError('Transaction looks like coinbase but has more than one txin')
@@ -263,11 +258,9 @@ class ScriptParser(Parser):
             if OpCodeConverter.exists(op):
                 self.require(op)
             elif '<' in op and '>' in op:  # push operation
-                # print('Trying to match push template: {}'.format(op))
                 if op[-1] == '*':
                     pushes += self.require_pushes(zero=True)
                 elif op[-1] == '+':
-                    # print('Non-zero push ops')
                     pushes += self.require_pushes(zero=False)
                 elif op[-1] == '>':
                     pushes.append(self.require_push(op[1:-1]))
@@ -286,7 +279,6 @@ class ScriptParser(Parser):
 
     def require_pushes(self, zero=False):
         pushes = []
-        next_op = None
         try:
             while True:
                 next_op = next(self)
@@ -315,7 +307,6 @@ class ScriptParser(Parser):
         return push_data
 
     def require(self, op):
-        from ..structs.script import Script
         try:
             next_op = next(self)
         except StopIteration:
