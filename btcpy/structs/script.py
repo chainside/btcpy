@@ -167,18 +167,23 @@ class StackData(Immutable, HexSerializable):
         object.__setattr__(self, 'data', bytearray(data))
 
     def __str__(self):
-        if not self.data:
+        if self.push_op[0] == 0 or 81 <= self.push_op[0] <= 96:
             if self.push_op[0] == 0:
                 return ''
             else:
                 return OpCodeConverter.from_int(self.push_op[0])
+        if not self.data:
+            return '00'
         return hexlify(self.data).decode()
 
     def __len__(self):
-        if not self.data:
+        if self.push_op[0] == 0 or 81 <= self.push_op[0] <= 96:
             # OP_0 to OP_16
             return 1
         return len(self.data)
+
+    def __bool__(self):
+        return len(self) != 0
 
     def __int__(self):
 
@@ -206,8 +211,12 @@ class StackData(Immutable, HexSerializable):
             else:
                 if self.push_op[0] in (79, 80):
                     return Parser.to_varint(1) + bytearray([(self.push_op[0])])
-                else:
+                elif self.push_op[0] in (81, 96):
                     return Parser.to_varint(1) + bytearray([(self.push_op[0] - 80)])
+                elif self.push_op[0] in range(76, 79):
+                    return self.push_op
+                else:  # 1-75
+                    return self.push_op
 
 
 # noinspection PyUnresolvedReferences
@@ -264,7 +273,8 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
         while parser:
             op = next(parser)
             if 1 <= op <= 78:  # pushdata
-                opcodes.append(parser.get_push(op))
+                pushed_data = parser.get_push(op)
+                opcodes.append(pushed_data)
             else:
                 try:
                     opcodes.append(OpCodeConverter.from_int(op))
@@ -873,7 +883,7 @@ class TimelockScript(ScriptPubKey):
             parser.require('OP_DROP')
             script = parser >> len(parser)
             return locktime, ScriptBuilder.identify(script, inner=True)
-        except (UnexpectedOperationFound, StopIteration) as exc:
+        except (UnexpectedOperationFound, StopIteration, IndexError) as exc:
             raise WrongScriptTypeException(str(exc))
 
     def __init__(self, *args):
@@ -1080,9 +1090,6 @@ class UnknownScript(ScriptPubKey):
     @property
     def type(self):
         return 'nonstandard'
-
-    def decompile(self):
-        return self.hexlify()
 
 
 class ScriptBuilder(object):

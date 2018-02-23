@@ -81,6 +81,7 @@ class TestUnknownScript(unittest.TestCase):
         for script in unknownscripts:
             result = ScriptBuilder.identify(unhexlify(script))
             self.assertTrue(isinstance(result, UnknownScript))
+            self.assertEqual(result.hexlify(), script)
 
 
 class TestPrivPubHashAddrP2pkhSegwit(unittest.TestCase):
