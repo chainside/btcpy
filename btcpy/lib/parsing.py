@@ -267,7 +267,7 @@ class ScriptParser(Parser):
                 else:
                     raise ValueError('Could not parse push requirement: {}'.format(op))
             else:
-                ValueError('Could not understand template')
+                raise ValueError('Could not understand template')
         if end:
             self.require_empty()
         return pushes
