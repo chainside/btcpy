@@ -266,6 +266,7 @@ the following hierarchy
     * `RelativeTimelockScript`
     * `Hashlock256Script`
     * `Hashlock160Script`
+    * `UnknownScript`
     
 Scripts have the following methods:
 ```python
@@ -342,7 +343,12 @@ bytearray(b'\xbb\x18\xed9\xc2\xa8ou\xf7\xbbZ\x9b6\xba5\x81\xd7\x7f\xd0\xf0')
 ```
 
 Of course, all the types listed at the beginning of this section can be recognised,
-see the next section for more complex script types.
+see the next section for more complex script types. Please keep in mind that the fact that
+a script is successfully built (a script can be built for every recognised script type,
+if no type matches, an `UnknownScript` is istantiated) does not mean that the script is valid.
+In fact, `UnknownScript`s can even contain non valid push operations or non-existing opcodes.
+The only way to know if a script is valid is executing it against an execution stack, a functionality
+that this library does not implement.
 
 ## Transactions
 
