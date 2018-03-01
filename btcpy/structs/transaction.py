@@ -13,7 +13,8 @@ from binascii import hexlify, unhexlify
 from decimal import Decimal
 
 from .sig import Sighash
-from .script import (ScriptBuilder, P2wpkhV0Script, P2wshV0Script, P2shScript, NulldataScript, ScriptSig, ScriptPubKey)
+from .script import (ScriptBuilder, P2wpkhV0Script, P2wshV0Script, P2shScript, NulldataScript, ScriptSig,
+                     CoinBaseScriptSig, ScriptPubKey)
 from ..lib.types import Immutable, Mutable, Jsonizable, HexSerializable, cached
 from ..lib.parsing import Parser, TransactionParser, Stream
 
@@ -85,8 +86,8 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
         from .script import ScriptSig
 
         if 'coinbase' in dic:
-
-            return CoinBaseTxIn(ScriptSig(bytearray(unhexlify(dic['coinbase']['hex']))), Sequence(int(dic['sequence'])))
+            return CoinBaseTxIn(CoinBaseScriptSig(bytearray(unhexlify(dic['coinbase']['hex']))),
+                                Sequence(int(dic['sequence'])))
         return cls(dic['txid'],
                    dic['vout'],
                    ScriptSig(bytearray(unhexlify(dic['scriptSig']['hex']))),
