@@ -54,9 +54,10 @@ p2sh = get_data('p2sh')
 priv_pub_hash_addr_p2pkh_segwit = get_data('priv_pub_hash_addr_p2pkh_segwit')
 b58 = get_data('base58')
 b58chk = get_data('base58_check')
+segwit_hashes = get_data('segwit_hashes')
 
 
-class B58Test(unittest.TestCase):
+class TestB58(unittest.TestCase):
 
     def test_b58encode(self):
         for hexa, encoded in b58:
@@ -75,13 +76,23 @@ class B58Test(unittest.TestCase):
             self.assertEqual(hexlify(b58decode_check(encoded)).decode(), hexa)
 
 
+class TestSegwitHashes(unittest.TestCase):
+
+    def test_hashes(self):
+        for tx in segwit_hashes:
+            parsed = Transaction.unhexlify(tx['tx'])
+            self.assertEqual(parsed.txid, tx['txid'])
+            self.assertEqual(parsed.hash(), tx['hash'])
+
+
 class TestUnknownScript(unittest.TestCase):
 
     def test(self):
         for script in unknownscripts:
-            result = ScriptBuilder.identify(unhexlify(script))
+            result = ScriptBuilder.identify(unhexlify(script['hex']))
             self.assertTrue(isinstance(result, UnknownScript))
-            self.assertEqual(result.hexlify(), script)
+            self.assertEqual(result.hexlify(), script['hex'])
+            self.assertEqual(str(result), script['asm'])
 
 
 class TestPrivPubHashAddrP2pkhSegwit(unittest.TestCase):
@@ -225,9 +236,14 @@ class TestTransaction(unittest.TestCase):
 
     def test_script(self):
         for key, value in scripts.items():
+            self.assertEqual(eval(value['code']).hexlify(), value['hex'])
+            self.assertEqual(str(eval(value['code'])), value['asm'])
+            parsed_script = Script.unhexlify(value['hex'])
+            self.assertEqual(parsed_script.hexlify(), value['hex'])
+            self.assertEqual(str(parsed_script), value['asm'])
             parsed_script = ScriptBuilder.identify(value['hex'])
             self.assertEqual(parsed_script.hexlify(), value['hex'])
-            self.assertEqual(eval(value['code']).hexlify(), value['hex'])
+            self.assertEqual(str(parsed_script), value['asm'])
             self.assertEqual(parsed_script.type, value['type'])
 
 
@@ -872,7 +888,7 @@ class TestStandardness(unittest.TestCase):
         txin = TxIn('4a0884b0aa0c3d34a81ea747aca1368effd9359d573f79873d2d6b4045e49205',
                     9,
                     script_sig,
-                    0xffffffff)
+                    Sequence(0xffffffff))
         self.assertTrue(txin.is_standard(prev_script))
 
         # 14 sigops redeem script
@@ -885,7 +901,7 @@ class TestStandardness(unittest.TestCase):
         txin = TxIn('4a0884b0aa0c3d34a81ea747aca1368effd9359d573f79873d2d6b4045e49205',
                     9,
                     script_sig,
-                    0xffffffff)
+                    Sequence(0xffffffff))
         self.assertTrue(txin.is_standard(prev_script))
 
     def test_txin_fail(self):
@@ -899,7 +915,7 @@ class TestStandardness(unittest.TestCase):
         txin = TxIn('4a0884b0aa0c3d34a81ea747aca1368effd9359d573f79873d2d6b4045e49205',
                     9,
                     script_sig,
-                    0xffffffff)
+                    Sequence(0xffffffff))
         self.assertFalse(txin.is_standard(prev_script))
 
         # nonstandard prev_script
@@ -912,7 +928,7 @@ class TestStandardness(unittest.TestCase):
         txin = TxIn('4a0884b0aa0c3d34a81ea747aca1368effd9359d573f79873d2d6b4045e49205',
                     9,
                     script_sig,
-                    0xffffffff)
+                    Sequence(0xffffffff))
         self.assertFalse(txin.is_standard(prev_script))
 
     def test_tx_success(self):
