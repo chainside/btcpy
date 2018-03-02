@@ -83,7 +83,6 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
     def from_json(cls, dic):
-        from .script import ScriptSig
 
         if 'coinbase' in dic:
             return CoinBaseTxIn(CoinBaseScriptSig(bytearray(unhexlify(dic['coinbase']['hex']))),
@@ -311,7 +310,6 @@ class Witness(Immutable, HexSerializable, Jsonizable):
         return result.serialize()
 
     def to_script_sig(self):
-        from .script import ScriptSig
         return ScriptSig.from_stack_data(self.items)
 
     def is_standard(self, p2wsh=False):
@@ -523,6 +521,9 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
                                       ', '.join(str(txin) for txin in self.ins),
                                       ', '.join(str(out) for out in self.outs),
                                       self.locktime))
+
+    def __eq__(self, other):
+        return self.hash() == other.hash()
 
 
 class MutableTransaction(Mutable, Transaction):
@@ -754,6 +755,9 @@ class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
                                       ', '.join(str(txin) for txin in self.ins),
                                       ', '.join(str(out) for out in self.outs),
                                       self.locktime))
+
+    def __eq__(self, other):
+        return self.hash() == other.hash()
 
 
 class MutableSegWitTransaction(Mutable, SegWitTransaction):
