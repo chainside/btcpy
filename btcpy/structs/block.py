@@ -74,6 +74,9 @@ class Block(Immutable, Jsonizable, HexSerializable):
 
         return Block.max_difficulty / current_target
 
+    def __eq__(self, other):
+        return self.hash() == other.hash()
+
 
 # noinspection PyUnresolvedReferences
 class BlockHeader(Immutable, Jsonizable, HexSerializable):
