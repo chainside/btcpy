@@ -230,7 +230,7 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
 
     @classmethod
     def unhexlify(cls, hex_string):
-        return cls(Script(bytearray(unhexlify(hex_string))))
+        return cls(bytearray(unhexlify(hex_string)))
 
     @staticmethod
     def compile(string):
@@ -258,11 +258,11 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
     def __eq__(self, other):
         return self.body == other.body
 
-    def serialize(self):
-        return self.body
-
     def __iter__(self):
         return iter(self.decompile().split())
+
+    def serialize(self):
+        return self.body
 
     @cached
     def decompile(self):
@@ -273,7 +273,11 @@ class BaseScript(Immutable, HexSerializable, metaclass=ABCMeta):
         while parser:
             op = next(parser)
             if 1 <= op <= 78:  # pushdata
-                pushed_data = parser.get_push(op)
+                try:
+                    pushed_data = parser.get_push(op)
+                except WrongPushDataOp:
+                    opcodes.append('[error]')
+                    break
                 opcodes.append(pushed_data)
             else:
                 try:
@@ -396,6 +400,13 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
     They also must implement the `type` property.
     """
     template = None
+
+    @classmethod
+    def unhexlify(cls, hex_string):
+        if cls is ScriptPubKey:
+            return cls(bytearray(unhexlify(hex_string)))
+        else:
+            return cls(Script(bytearray(unhexlify(hex_string))))
 
     @classmethod
     def verify(cls, bytes_):
