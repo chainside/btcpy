@@ -51,13 +51,10 @@ class StackData(Immutable, HexSerializable):
     @classmethod
     def from_bytes(cls, bytes_):
         data_len = len(bytes_)
-
         if data_len == 0:
             return cls.zero()
 
         if data_len == 1:
-            if bytes_[0] == 0:
-                raise ValueError('Trying to push byte 0x00 with a literal byte instead of empty array')
             if 1 <= bytes_[0] <= 16:
                 return cls(bytearray([80 + bytes_[0]]))
 
