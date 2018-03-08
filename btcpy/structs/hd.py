@@ -36,7 +36,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     
     @classmethod
     def decode(cls, string, check_network=True):
-        if string[0] == 'x':
+        if string[0] == 'x' or string[0] == 'y':
             mainnet = True
         elif string[0] == 't':
             mainnet = False
