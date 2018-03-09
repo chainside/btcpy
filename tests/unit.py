@@ -25,7 +25,7 @@ from btcpy.lib.base58 import b58decode, b58encode
 from btcpy.lib.base58 import b58decode_check, b58encode_check
 from btcpy.lib.parsing import IncompleteParsingException
 
-setup('regtest')
+setup('testnet')
 
 
 def get_data(filename):
@@ -55,6 +55,7 @@ priv_pub_hash_addr_p2pkh_segwit = get_data('priv_pub_hash_addr_p2pkh_segwit')
 b58 = get_data('base58')
 b58chk = get_data('base58_check')
 segwit_hashes = get_data('segwit_hashes')
+wif = get_data('wif')
 
 
 class TestB58(unittest.TestCase):
@@ -346,13 +347,12 @@ class TestKeys(unittest.TestCase):
             self.assertEqual(m.derive(path).key, PrivateKey.from_wif(priv))
 
     def test_to_wif(self):
-        vectors = get_data('wif')
-        for v in vectors:
-            self.assertEqual(PrivateKey.from_wif(v['wif'], check_network=False).hexlify(), v['hex'])
-            priv = PrivateKey.unhexlify(v['hex'])
-            if not v['compressed']:
+        for w in wif:
+            self.assertEqual(PrivateKey.from_wif(w['wif'], check_network=False).hexlify(), w['hex'])
+            priv = PrivateKey.unhexlify(w['hex'])
+            if not w['compressed']:
                 priv.public_compressed = False
-            self.assertEqual(priv.to_wif(v['mainnet']), v['wif'])
+            self.assertEqual(priv.to_wif(w['mainnet']), w['wif'])
 
 
 class TestPubkey(unittest.TestCase):

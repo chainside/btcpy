@@ -9,7 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE.md file.
 
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 from ..lib.base58 import b58decode_check, b58encode_check
 from hashlib import sha256
 from ecdsa import SigningKey, SECP256k1
@@ -19,7 +19,8 @@ from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import Address, SegWitAddress
-from ..setup import is_mainnet
+from ..setup import is_mainnet, net_name
+from ..constants import Constants
 
 
 class Key(HexSerializable, metaclass=ABCMeta):
@@ -39,14 +40,12 @@ class PrivateKey(Key):
         decoded = b58decode_check(wif)
         prefix, *rest = decoded
 
-        if prefix not in {0x80, 0xef}:
+        if prefix not in Constants.get('wif.prefixes').values():
             raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
 
         if check_network:
-            if prefix == 0x80 and not is_mainnet():
-                raise ValueError('Mainnet prefix in testnet environment')
-            elif prefix == 0xef and is_mainnet():
-                raise ValueError('Testnet prefix in mainnet environment')
+            if prefix != Constants.get('wif.prefixes')[net_name()]:
+                raise ValueError('{0} prefix in non-{0} environment'.format(net_name()))
 
         public_compressed = len(rest) == 33
         privk = rest[0:32]
@@ -64,8 +63,8 @@ class PrivateKey(Key):
     def to_wif(self, mainnet=None):
         if mainnet is None:
             mainnet = is_mainnet()
-        prefix = bytearray([0x80]) if mainnet else bytearray([0xef])
-        decoded = prefix + self.key
+        prefix = Constants.get('wif.prefixes')['mainnet' if mainnet else 'testnet']
+        decoded = bytearray([prefix]) + self.key
         if self.public_compressed:
             decoded.append(0x01)
         return b58encode_check(bytes(decoded))
