@@ -453,7 +453,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
         if segwit_version is not None:
             return SegWitAddress('p2wsh', self.p2wsh_hash(), segwit_version, is_mainnet())
         else:
-            return Address('p2sh', self.p2sh_hash(), is_mainnet())
+            return self.address()
 
     def is_standard(self):
         """Subclasses which have standard types should reimplement this method"""
@@ -462,7 +462,7 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
     def address(self):
         """Subclasses which have a meaningful concept of address should reimplement this. For the moment
         we consider to have a meaningful address only for the following types: P2pkh, P2sh, P2wpkh, P2wsh"""
-        return None
+        return Address('p2sh', self.p2sh_hash(), is_mainnet())
 
 
 # noinspection PyUnresolvedReferences
