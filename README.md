@@ -19,6 +19,7 @@ Table of Contents
 =================
 
    * [btcpy](#btcpy)
+   * [Table of Contents](#table-of-contents)
    * [Requirements](#requirements)
    * [Installation](#installation)
    * [What it does](#what-it-does)
@@ -27,10 +28,11 @@ Table of Contents
    * [Usage examples](#usage-examples)
       * [Network setup](#network-setup)
       * [Parsing and serialization](#parsing-and-serialization)
-      * [Keys and addresses](#keys-and-addresses)
+      * [Keys](#keys)
          * [HD keys](#hd-keys)
       * [Scripts](#scripts)
          * [Low-level scripting functionalities](#low-level-scripting-functionalities)
+      * [Addresses](#addresses)
       * [Transactions](#transactions)
          * [Creating transactions](#creating-transactions)
          * [Spending a transaction](#spending-a-transaction)
@@ -42,8 +44,10 @@ Table of Contents
          * [Multisig](#multisig)
          * [Timelocks, Hashlocks, IfElse](#timelocks-hashlocks-ifelse)
          * [Low-level signing](#low-level-signing)
-   * [Contributing](#contributing-and-running-tests)
+   * [Contributing and running tests](#contributing-and-running-tests)
+   * [Roadmp to v1](#roadmp-to-v1)
    * [TODO](#todo)
+
 
 # Requirements
 The strict requirements of this library are:
