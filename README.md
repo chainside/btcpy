@@ -817,14 +817,20 @@ python3 -m unittest tests/integration.py
 Contributors are invited to run these tests before submitting PRs. Also, contributions to improve and
 expand these tests are highly welcome.
 
+# Roadmp to v1
+This library's stable version 1 will be released once the following changes are made:
+* More efficient script matching (i.e. scripts should be able to specify fast matching conditions
+instead of trying to parse the raw bytes to decide whether the template is matched)
+* Caching on SegWit digest computation to avoid quadratic hashing
+* Generation of private keys through secure entropy sources
+* An extensive documentation of all modules, classes and their parameters is produced
+
 # TODO
-Since this library is still a work in progress, the following roadmap lists the improvements to be done:
+Since this library is still a work in progress, the following roadmap lists the improvements to be
+done eventually:
 * Expanding the test suites
-* Improving and expanding this documentation
 * Adding docstrings where missing (many places)
 * Handling `OP_CODESEPARATOR`s  in the signing process
-* Adding caching to segwit digest computation to avoid quadratic hashing
 * Add further transaction creation helpers
 * Add RPC calls to Bitcoin Core nodes
 * Add networking with Bitcoin Core nodes
-* Add methods to generate private keys from entropy
