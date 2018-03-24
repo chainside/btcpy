@@ -44,7 +44,7 @@ class PrivateKey(Key):
             raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
 
         if check_network:
-            if prefix != Constants.get('wif.prefixes')[net_name()]:
+            if prefix != Constants.get('wif.prefixes')['mainnet' if is_mainnet() else 'testnet']:
                 raise ValueError('{0} prefix in non-{0} environment'.format(net_name()))
 
         public_compressed = len(rest) == 33

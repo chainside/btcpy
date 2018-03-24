@@ -25,7 +25,7 @@ from btcpy.lib.base58 import b58decode, b58encode
 from btcpy.lib.base58 import b58decode_check, b58encode_check
 from btcpy.lib.parsing import IncompleteParsingException
 
-setup('testnet')
+setup('regtest')
 
 
 def get_data(filename):

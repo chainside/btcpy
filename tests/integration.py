@@ -23,7 +23,7 @@ from btcpy.structs.sig import *
 from btcpy.structs.script import *
 from btcpy.setup import setup
 
-setup('testnet')
+setup('regtest')
 
 
 keys = [('tpubDHVQPtNuLdRLj7FU348D5PcrkkPj5ibhN52cfjthEH9KTfwTaVmo'
