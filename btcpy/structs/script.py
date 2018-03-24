@@ -19,8 +19,7 @@ from ..lib.types import HexSerializable, Immutable, cached
 from ..lib.parsing import ScriptParser, Parser, Stream, UnexpectedOperationFound
 from ..lib.opcodes import OpCodeConverter
 from .crypto import WrongPubKeyFormat
-from .address import Address, SegWitAddress
-from ..setup import is_mainnet
+from .address import P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
 
 
 class WrongScriptTypeException(Exception):
@@ -449,12 +448,6 @@ class ScriptPubKey(BaseScript, metaclass=ABCMeta):
     def to_stack_data(self):
         return StackData.from_bytes(self.serialize())
 
-    def to_address(self, segwit_version=None):
-        if segwit_version is not None:
-            return SegWitAddress('p2wsh', self.p2wsh_hash(), segwit_version, is_mainnet())
-        else:
-            return Address('p2sh', self.p2sh_hash(), is_mainnet())
-
     def is_standard(self):
         """Subclasses which have standard types should reimplement this method"""
         return False
@@ -491,9 +484,7 @@ class P2pkhScript(ScriptPubKey):
             object.__setattr__(self, 'pubkeyhash', param.hash())
         elif isinstance(param, bytearray):
             object.__setattr__(self, 'pubkeyhash', param)
-        elif isinstance(param, Address):
-            if param.type != self.type:
-                raise ValueError('Non-p2pkh address provided. Address type: {}'.format(param.type))
+        elif isinstance(param, P2pkhAddress):
             object.__setattr__(self, 'pubkeyhash', param.hash)
         else:
             raise TypeError('Wrong type for P2pkhScript __init__: {}'.format(type(param)))
@@ -508,24 +499,46 @@ class P2pkhScript(ScriptPubKey):
         return 'p2pkh'
 
     def address(self, mainnet=None):
-        return Address('p2pkh', self.pubkeyhash, mainnet)
+        return P2pkhAddress.from_script(self, mainnet)
 
     def is_standard(self):
         return True
 
 
-class P2wpkhV0Script(P2pkhScript):
+class SegWitScript(ScriptPubKey, metaclass=ABCMeta):
+
+    @staticmethod
+    @abstractmethod
+    def get_version():
+        raise NotImplemented
+
+
+class P2wpkhScript(P2pkhScript, SegWitScript, metaclass=ABCMeta):
+
+    @staticmethod
+    def get(segwit_version):
+        for cls in P2wpkhScript.__subclasses__():
+            if cls.get_version() == segwit_version:
+                return cls
+        raise ValueError('Undefined version: {}'.format(segwit_version))
+
+    def address(self, mainnet=None):
+        return P2wpkhAddress.from_script(self, mainnet)
+
+
+class P2wpkhV0Script(P2wpkhScript):
 
     template = 'OP_0 <20>'
 
     compile_fmt = 'OP_0 {}'
 
+    @staticmethod
+    def get_version():
+        return 0
+
     def __init__(self, param):
-        if isinstance(param, SegWitAddress):
-            if param.type != 'p2wpkh':
-                raise ValueError('Non-p2wpkh address provided. Address type: {}'.format(param.type))
-            else:
-                param = param.hash
+        if isinstance(param, P2wpkhAddress):
+            param = param.hash
 
         super().__init__(param)
 
@@ -536,20 +549,8 @@ class P2wpkhV0Script(P2pkhScript):
     def type(self):
         return 'p2wpkhv0'
 
-    def address(self, mainnet=None):
-        return SegWitAddress('p2wpkh', self.pubkeyhash, 0)
-
     def get_scriptcode(self):
         return P2pkhScript(self.pubkeyhash).to_stack_data()
-
-
-class P2wpkhScript(ScriptPubKey, metaclass=ABCMeta):
-
-    versions = {0: P2wpkhV0Script}
-
-    @classmethod
-    def get(cls, segwit_version):
-        return cls.versions[segwit_version]
 
 
 # noinspection PyUnresolvedReferences
@@ -575,9 +576,7 @@ class P2shScript(ScriptPubKey):
 
         if isinstance(param, ScriptPubKey):
             object.__setattr__(self, 'scripthash', param.p2sh_hash())
-        elif isinstance(param, Address):
-            if param.type != self.type:
-                raise ValueError('Non-p2sh address provided. Address type: {}'.format(param.type))
+        elif isinstance(param, P2shAddress):
             object.__setattr__(self, 'scripthash', param.hash)
         elif isinstance(param, bytearray):
             object.__setattr__(self, 'scripthash', param)
@@ -596,29 +595,42 @@ class P2shScript(ScriptPubKey):
     def is_standard(self):
         return True
 
-    def address(self):
-        return Address('p2sh', self.scripthash)
+    def address(self, mainnet=None):
+        return P2shAddress.from_script(self, mainnet)
 
-    def to_address(self, segwit_version=None):
-        return self.address()
+
+class P2wshScript(P2shScript, SegWitScript, metaclass=ABCMeta):
+
+    @staticmethod
+    def get(segwit_version):
+        for cls in P2wshScript.__subclasses__():
+            if cls.get_version() == segwit_version:
+                return cls
+        raise ValueError('Undefined version: {}'.format(segwit_version))
+
+    def address(self, mainnet=None):
+        return P2wshAddress.from_script(self, mainnet)
 
 
 # noinspection PyUnresolvedReferences
-class P2wshV0Script(P2shScript):
+class P2wshV0Script(P2wshScript):
 
     template = 'OP_0 <32>'
 
     compile_fmt = 'OP_0 {}'
 
+    @staticmethod
+    def get_version():
+        return 0
+
     def __init__(self, param):
+        if isinstance(param, P2wpkhScript):
+            raise ValueError("Can't embed P2WPKH script in P2WSH format")
         # segwit p2wsh have different hashing method than regular p2sh scripts!
         if isinstance(param, ScriptPubKey):
             param = param.p2wsh_hash()
-        if isinstance(param, SegWitAddress):
-            if param.type != 'p2wsh':
-                raise ValueError('Non-p2wsh address provided. Address type: {}'.format(param.type))
-            else:
-                param = param.hash
+        if isinstance(param, P2wshAddress):
+            param = param.hash
 
         super().__init__(param)
 
@@ -628,23 +640,6 @@ class P2wshV0Script(P2shScript):
     @property
     def type(self):
         return 'p2wshv0'
-
-    def address(self):
-        return SegWitAddress('p2wsh', self.scripthash, 0)
-
-    def to_address(self, segwit_version=None):
-        if segwit_version is not None:
-            raise ValueError("Can't request p2wsh address of p2wsh script")
-        return self.address()
-
-
-class P2wshScript(ScriptPubKey, metaclass=ABCMeta):
-
-    versions = {0: P2wshV0Script}
-
-    @classmethod
-    def get(cls, segwit_version):
-        return cls.versions[segwit_version]
 
 
 # noinspection PyUnresolvedReferences

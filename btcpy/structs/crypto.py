@@ -18,7 +18,7 @@ from functools import partial
 from abc import ABCMeta
 
 from ..lib.types import HexSerializable
-from .address import Address, SegWitAddress
+from .address import P2pkhAddress, P2wpkhAddress
 from ..setup import is_mainnet, net_name
 from ..constants import Constants
 
@@ -201,16 +201,16 @@ class PublicKey(Key):
     def to_address(self, mainnet=None):
         if mainnet is None:
             mainnet = is_mainnet()
-        return Address('p2pkh', self.hash(), mainnet)
+        return P2pkhAddress(self.hash(), mainnet)
 
-    def to_segwit_address(self, mainnet=None):
+    def to_segwit_address(self, version, mainnet=None):
         if mainnet is None:
             mainnet = is_mainnet()
         if self.type == 'uncompressed':
             pubk = PublicKey(self.compressed)
         else:
             pubk = self
-        return SegWitAddress('p2wpkh', pubk.hash(), mainnet)
+        return P2wpkhAddress(pubk.hash(), version, mainnet)
 
     def compress(self):
         if self.type != 'uncompressed':

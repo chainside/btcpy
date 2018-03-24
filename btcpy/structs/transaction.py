@@ -200,6 +200,9 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
     def req_sigs(self):
         return self.script_pubkey.req_sigs
 
+    def address(self):
+        return self.script_pubkey.address()
+
     def is_standard(self):
         return self.script_pubkey.is_standard()
 
