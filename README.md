@@ -45,7 +45,7 @@ Table of Contents
          * [Timelocks, Hashlocks, IfElse](#timelocks-hashlocks-ifelse)
          * [Low-level signing](#low-level-signing)
    * [Contributing and running tests](#contributing-and-running-tests)
-   * [Roadmp to v1](#roadmp-to-v1)
+   * [Roadmap to v1](#roadmp-to-v1)
    * [TODO](#todo)
 
 
@@ -823,7 +823,7 @@ python3 -m unittest tests/integration.py
 Contributors are invited to run these tests before submitting PRs. Also, contributions to improve and
 expand these tests are highly welcome.
 
-# Roadmp to v1
+# Roadmap to v1
 This library's stable version 1 will be released once the following changes are made:
 * More efficient script matching (i.e. scripts should be able to specify fast matching conditions
 instead of trying to parse the raw bytes to decide whether the template is matched)
