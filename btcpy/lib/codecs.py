@@ -15,7 +15,7 @@ from .base58 import b58encode_check, b58decode_check
 from .bech32 import decode, encode
 from ..setup import is_mainnet, net_name
 from ..constants import Constants
-from ..structs.address import Address, SegWitAddress
+from ..structs.address import Address, P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
 
 
 class CouldNotDecode(ValueError):
@@ -51,9 +51,9 @@ class Base58Codec(Codec):
     @staticmethod
     def encode(address):
         try:
-            prefix = Constants.get('base58.raw_prefixes')[(address.network, address.type)]
+            prefix = Constants.get('base58.raw_prefixes')[(address.network, address.get_type())]
         except KeyError:
-            raise CouldNotEncode('Impossible to encode address type: {}, network: {}'.format(address.type,
+            raise CouldNotEncode('Impossible to encode address type: {}, network: {}'.format(address.get_type(),
                                                                                              address.network))
         return b58encode_check(bytes(prefix + address.hash))
 
@@ -71,7 +71,14 @@ class Base58Codec(Codec):
         if check_network:
             Base58Codec.check_network(network)
 
-        return Address(addr_type, hashed_data, network == 'mainnet')
+        if addr_type == 'p2pkh':
+            cls = P2pkhAddress
+        elif addr_type == 'p2sh':
+            cls = P2shAddress
+        else:
+            raise ValueError('Unknown address type: {}'.format(addr_type))
+
+        return cls(hashed_data, network == 'mainnet')
 
 
 class Bech32Codec(Codec):
@@ -108,4 +115,11 @@ class Bech32Codec(Codec):
         if check_network:
             Bech32Codec.check_network(network)
 
-        return SegWitAddress(addr_type, bytearray(hashed_data), version, network == 'mainnet')
+        if addr_type == 'p2wpkh':
+            cls = P2wpkhAddress
+        elif addr_type == 'p2wsh':
+            cls = P2wshAddress
+        else:
+            raise ValueError('Unknown address type: {}'.format(addr_type))
+
+        return cls(bytearray(hashed_data), version, network == 'mainnet')

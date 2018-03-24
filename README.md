@@ -19,6 +19,7 @@ Table of Contents
 =================
 
    * [btcpy](#btcpy)
+   * [Table of Contents](#table-of-contents)
    * [Requirements](#requirements)
    * [Installation](#installation)
    * [What it does](#what-it-does)
@@ -27,10 +28,11 @@ Table of Contents
    * [Usage examples](#usage-examples)
       * [Network setup](#network-setup)
       * [Parsing and serialization](#parsing-and-serialization)
-      * [Keys and addresses](#keys-and-addresses)
+      * [Keys](#keys)
          * [HD keys](#hd-keys)
       * [Scripts](#scripts)
          * [Low-level scripting functionalities](#low-level-scripting-functionalities)
+      * [Addresses](#addresses)
       * [Transactions](#transactions)
          * [Creating transactions](#creating-transactions)
          * [Spending a transaction](#spending-a-transaction)
@@ -42,8 +44,10 @@ Table of Contents
          * [Multisig](#multisig)
          * [Timelocks, Hashlocks, IfElse](#timelocks-hashlocks-ifelse)
          * [Low-level signing](#low-level-signing)
-   * [Contributing](#contributing-and-running-tests)
+   * [Contributing and running tests](#contributing-and-running-tests)
+   * [Roadmp to v1](#roadmp-to-v1)
    * [TODO](#todo)
+
 
 # Requirements
 The strict requirements of this library are:
@@ -152,7 +156,7 @@ In the same way, these structures can be serialized and deserialized by using th
 `serialize()` and `deserialize()` methods. These methods respectively return and
 expect a `bytearray` type.
 
-## Keys and addresses
+## Keys
 The `PublicKey` class can handle both compressed and uncompressed public
 keys. In any case both the compressed and uncompressed version can be extracted.
 However, the structure will remember how it was initialised, so the `hexlify()`,
@@ -209,19 +213,7 @@ using its `compress()` method:
 ```
 
 Addresses can be either created from a `PublicKey` or from a script.
-In particular this second use case will be documented in the **Script** section.
-
-Another low-level way to build an `Address` or `SegWitAddress` is by using their
- constructor and providing the following data:
-
-```python
-address = Address(addr_type, hashed_data)
-sw_address = SegWitAddress(addr_type, hashed_data, version)
-```
-
-where `addr_type` can be either `'p2pkh'` or `'p2sh'` in the case of `Address`
-and `'p2wpkh'` or `'p2wsh'` in the case of SegWitAddress. `hashed_data` must be a
-160 or 256 bits long `bytearray`.
+In particular this second use case will be documented in the **Addresses** section.
 
 ### HD keys
 The `structs.hd` module provides functionalities to handle BIP32 HD keys.
@@ -256,8 +248,10 @@ the following hierarchy
   * `ScriptPubKey`
     * `P2pkhscript`
     * `P2wpkhScript`
+      * `P2wpkhV0Script`
     * `P2shScript`
     * `P2wshScript`
+      * `P2wshV0Script`
     * `P2pkScript`
     * `NulldataScript`
     * `MultisigScript`
@@ -354,6 +348,81 @@ for non-valid push operations, the script asm (obtained through the `decompile` 
 will contain `[error]` where the push takes place. For non-existing opcodes the asm will contain
 the special opcode `OP_INVALIDOPCODE`. These two beahviours match Bitcoin Core's behaviour when
 producing script asm.
+
+## Addresses
+
+Supported addresses are: `P2pkhAddress`, `P2shAddress`, `P2wpkhAddress` and `P2wshAddress`.
+These constructors can be used to build an address from a hash (plus a SegWit version in the
+case of `P2wpkhAddress` or `P2wshAddress`), for example:
+
+```python
+from btcpy.structs.crypto import PublicKey
+from btcpy.structs.address import P2pkhAddress, P2wpkhAddress
+pubk = PublicKey.unhexlify('02ea4e183e8c751a4cc72abb7088cea79351dbfb7981ceb48f286ccfdade4d42c8')
+address = P2pkhAddress(pubk.hash())
+sw_address = P2wpkhAddress(pubk.hash(), version=0)
+print(str(address))  # prints "mkGY1QBotzNCrpJaEsje3BpYJsktksi3gJ"
+print(str(sw_address))  # prints "tb1qxs0gs9dzukv863jud3wpldtrjh9edeqqqzahcz"
+```
+
+Please note that by default all the address constructors will return an address in the
+format of the network type specified in setup (testnet in the case of this example) but
+a flag can be passed to them to return an address for another network:
+
+```python
+address = P2pkhAddress(pubk.hash(), mainnet=True)
+sw_address = P2wpkhAddress(pubk.hash(), version=0, mainnet=True)
+print(str(address))  # prints "15kaiM6q5xvx5hpxXJmGDGcDStABoGTzSX"
+print(str(sw_address))  # prints "bc1qxs0gs9dzukv863jud3wpldtrjh9edeqq2yxyr3"
+```
+
+However, a more common usecase is generating an address for a script, for this the `from_script`
+static method of all address classes can be used, in particular:
+
+* `P2pkhAddress.from_script(script, mainnet=None)` will instantiate a `P2pkhAddress` from a
+`P2pkhScript`, raising `WrongScriptType` exception in case another type of script is provided.
+* `P2shAddress.from_script(script, mainnet=None)` will instantiate a `P2shAddress` representing
+the script address if a `P2shscript` is provided, while returning the address of the script
+embedded in P2SH format if other script types are provided.
+*  `P2wpkhAddress.from_script(script, version, mainnet=None)` will instantiate a `P2wpkhAddress`
+ from a `P2wpkhScript`, raising `WrongScriptType` exception in case another type of script
+ is provided.
+* `P2wshAddress.from_script(script, version, mainnet=None)` will instantiate a `P2wshAddress`
+representing the script address if a `P2wshscript` is provided, while returning the address
+of the script embedded in P2WSH format if other script types are provided.
+
+The only scripts that directly support an address (i.e. `P2pkhScript`, `P2wpkhScript`,
+`P2shscript`, `P2wshScript`) also provide a helper method `address()` to return the script
+address, for all other script types will return `None` if the `address()` method is called
+and will need to be explicitly converted to P2SH or P2WSH format to obtain an address. Some
+examples follow:
+
+```python
+>>> str(P2pkhAddress.from_script(P2pkhScript(pubk)))
+'mkGY1QBotzNCrpJaEsje3BpYJsktksi3gJ'
+>>> str(P2pkhScript(pubk).address())
+'mkGY1QBotzNCrpJaEsje3BpYJsktksi3gJ'
+>>> str(P2pkhAddress.from_script(P2shScript(P2pkhScript(pubk))))
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File ".../btcpy/btcpy/structs/address.py", line 120, in from_script
+    raise WrongScriptType('Trying to produce P2pkhAddress from {} script'.format(script.__class__.__name__))
+btcpy.structs.address.WrongScriptType: Trying to produce P2pkhAddress from P2shScript script
+>>> str(P2shAddress.from_script(P2shScript(P2pkhScript(pubk))))
+'2NAJWD6EnXMVt16HUp5vmfwPjz4FemvPhYt'
+>>> str(P2shScript(P2pkhScript(pubk)).address())
+'2NAJWD6EnXMVt16HUp5vmfwPjz4FemvPhYt'
+>>> str(P2wpkhAddress.from_script(P2wpkhV0Script(pubk)))
+'tb1qxs0gs9dzukv863jud3wpldtrjh9edeqqqzahcz'
+>>> str(P2wpkhV0Script(pubk).address())
+'tb1qxs0gs9dzukv863jud3wpldtrjh9edeqqqzahcz'
+>>> str(P2wpkhAddress.from_script(P2shScript(P2wpkhV0Script(pubk))))
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File ".../btcpy/btcpy/structs/address.py", line 158, in from_script
+    raise WrongScriptType('Trying to produce P2pkhAddress from {} script'.format(script.__class__.__name__))
+btcpy.structs.address.WrongScriptType: Trying to produce P2pkhAddress from P2shScript script
+```
 
 ## Transactions
 
@@ -754,14 +823,20 @@ python3 -m unittest tests/integration.py
 Contributors are invited to run these tests before submitting PRs. Also, contributions to improve and
 expand these tests are highly welcome.
 
+# Roadmp to v1
+This library's stable version 1 will be released once the following changes are made:
+* More efficient script matching (i.e. scripts should be able to specify fast matching conditions
+instead of trying to parse the raw bytes to decide whether the template is matched)
+* Caching on SegWit digest computation to avoid quadratic hashing
+* Generation of private keys through secure entropy sources
+* An extensive documentation of all modules, classes and their parameters is produced
+
 # TODO
-Since this library is still a work in progress, the following roadmap lists the improvements to be done:
+Since this library is still a work in progress, the following roadmap lists the improvements to be
+done eventually:
 * Expanding the test suites
-* Improving and expanding this documentation
 * Adding docstrings where missing (many places)
 * Handling `OP_CODESEPARATOR`s  in the signing process
-* Adding caching to segwit digest computation to avoid quadratic hashing
 * Add further transaction creation helpers
 * Add RPC calls to Bitcoin Core nodes
 * Add networking with Bitcoin Core nodes
-* Add methods to generate private keys from entropy

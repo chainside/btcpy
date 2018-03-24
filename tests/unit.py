@@ -17,7 +17,7 @@ from btcpy.structs.transaction import *
 from btcpy.structs.script import *
 from btcpy.structs.block import *
 from btcpy.structs.crypto import PublicKey, PrivateKey
-from btcpy.structs.address import Address
+from btcpy.structs.address import Address, SegWitAddress, P2shAddress, P2wshAddress
 from btcpy.lib.codecs import CouldNotDecode
 from btcpy.setup import setup
 from btcpy.structs.hd import *
@@ -56,6 +56,8 @@ b58 = get_data('base58')
 b58chk = get_data('base58_check')
 segwit_hashes = get_data('segwit_hashes')
 wif = get_data('wif')
+p2wpkh_over_p2sh = get_data("p2wpkh_over_p2sh")
+p2wsh_over_p2sh = get_data("p2wsh_over_p2sh")
 
 
 class TestB58(unittest.TestCase):
@@ -264,6 +266,27 @@ class TestSegWitAddress(unittest.TestCase):
         for address in segwit_invalid_addresses:
             with self.assertRaises(CouldNotDecode):
                 print(SegWitAddress.from_string(address, check_network=False))
+
+
+class TestSegwitOverP2sh(unittest.TestCase):
+
+    def test_p2wpkh_over_p2sh(self):
+        for spend in p2wpkh_over_p2sh:
+            pubkey = PublicKey.unhexlify(spend['pubkey'])
+            self.assertEqual(str(P2shAddress.from_script(P2wpkhScript.get(spend['witness_version'])(pubkey),
+                                                         mainnet=True)),
+                             spend['address'])
+            self.assertEqual(P2wpkhScript.get(spend['witness_version'])(pubkey).hexlify(), spend['redeem_script'])
+            self.assertEqual(str(P2shScript(P2wpkhScript.get(spend['witness_version'])(pubkey))), spend['script_pubkey'])
+
+    def test_p2wsh_over_p2sh(self):
+        for spend in p2wsh_over_p2sh:
+            wit_script = ScriptBuilder.identify(spend['witness_script'])
+            self.assertEqual(str(P2shScript(P2wshScript.get(spend['witness_version'])(wit_script))), spend['script_pubkey'])
+            self.assertEqual(P2wshScript.get(spend['witness_version'])(wit_script).hexlify(), spend['redeem_script'])
+            self.assertEqual(str(P2shAddress.from_script(P2wshScript.get(spend['witness_version'])(wit_script),
+                                                         mainnet=True)),
+                             spend['address'])
 
 
 class TestReplace(unittest.TestCase):
@@ -529,7 +552,7 @@ class TestP2sh(unittest.TestCase):
         self.redeem_script = P2pkhScript(PublicKey.unhexlify('0384478d41e71dc6c3f9edde0f928a47d1b724c'
                                                              '05984ebfb4e7d0422e80abe95ff'))
         self.as_data = StackData.from_bytes(self.redeem_script.p2sh_hash())
-        self.address = self.redeem_script.to_address()
+        self.address = P2shAddress.from_script(self.redeem_script)
 
     def test_success_hash(self):
         script = P2shScript(self.redeem_script.p2sh_hash())
@@ -550,7 +573,7 @@ class TestP2sh(unittest.TestCase):
             from_addr = P2shScript(Address.from_string(address))
             from_script = P2shScript(script)
             self.assertTrue(str(from_addr.address()) == address)
-            self.assertTrue(str(script.to_address()) == address)
+            self.assertTrue(str(P2shAddress.from_script(script)) == address)
             self.assertTrue(str(from_script.address()) == address)
 
         script = P2shScript(self.address)
@@ -785,15 +808,15 @@ class TestAddress(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.good_addresses = {('mainnet', 'p2pkh', '1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa',
+        self.good_addresses = {('mainnet', P2pkhAddress, '1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa',
                                 b'\xc8\xe9\t\x96\xc7\xc6\x08\x0e\xe0b\x84`\x0chN\xd9\x04\xd1L\\'),
-                               ('testnet', 'p2pkh', 'mtH6FLMQNu2fFQ4mrb7UjEUjTAhUNCMFoi',
+                               ('testnet', P2pkhAddress, 'mtH6FLMQNu2fFQ4mrb7UjEUjTAhUNCMFoi',
                                 b'\x8b\xfas]\x98\xabb\x1e\xdbOw\xd7\xb7\xfe\nK\x1f\xfc\xc0$'),
-                               ('testnet', 'p2pkh', 'n3wEvhujG7SDcgeKCXZMrty5QqhQZ7f6jW',
+                               ('testnet', P2pkhAddress, 'n3wEvhujG7SDcgeKCXZMrty5QqhQZ7f6jW',
                                 b'\xf5\xea\xa2K\x82\xc8\x1f4L\x9a\x16\xa8\xfb\x84t\xe1\x10\xfd\xb1\xc3'),
-                               ('mainnet', 'p2sh', '3P14159f73E4gFr7JterCCQh9QjiTjiZrG',
+                               ('mainnet', P2shAddress, '3P14159f73E4gFr7JterCCQh9QjiTjiZrG',
                                 b'\xe9\xc3\xdd\x0c\x07\xaa\xc7ay\xeb\xc7jlx\xd4\xd6|l\x16\n'),
-                               ('testnet', 'p2sh', '2N6JFaB5rMtPwutovP6cirwBVxHuAVaHvMG',
+                               ('testnet', P2shAddress, '2N6JFaB5rMtPwutovP6cirwBVxHuAVaHvMG',
                                 b'\x8f,4\xa2<F\xe9\x80\xb7\x9e\x10\x9b\x11\xa2\xc8-9\x92\xeb\x95')}
         self.bad_addresses = {'vioqwV3F4YzpgnfyUukGVMB3Hv83ujehKCiGWyrYyx2Z7hiKQy7SWUV9KgfMdV9J',
                               'bc1a',
@@ -804,7 +827,7 @@ class TestAddress(unittest.TestCase):
         for net, addr_type, address, hashed_data in self.good_addresses:
             from_string = Address.from_string(address, check_network=False)
             self.assertTrue(address == str(from_string))
-            self.assertTrue(from_string.type == addr_type)
+            self.assertTrue(from_string.__class__ == addr_type)
             self.assertTrue(from_string.network == net)
             self.assertTrue(from_string.hash == hashed_data)
 
@@ -819,7 +842,7 @@ class TestAddress(unittest.TestCase):
             self.assertEqual(str(P2pkhScript(bytearray(unhexlify(pkh))).address(mainnet=True)), address)
             self.assertEqual(P2pkhScript(Address.from_string(address, check_network=False)).pubkeyhash,
                              bytearray(unhexlify(pkh)))
-            self.assertEqual(Address('p2pkh', bytearray(unhexlify(pkh)), mainnet=True).hash, bytearray(unhexlify(pkh)))
+            self.assertEqual(P2pkhAddress(bytearray(unhexlify(pkh)), mainnet=True).hash, bytearray(unhexlify(pkh)))
 
 
 class TestStandardness(unittest.TestCase):
