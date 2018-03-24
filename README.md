@@ -244,8 +244,10 @@ the following hierarchy
   * `ScriptPubKey`
     * `P2pkhscript`
     * `P2wpkhScript`
+      * `P2wpkhV0Script`
     * `P2shScript`
     * `P2wshScript`
+      * `P2wshV0Script`
     * `P2pkScript`
     * `NulldataScript`
     * `MultisigScript`
