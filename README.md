@@ -45,7 +45,7 @@ Table of Contents
          * [Timelocks, Hashlocks, IfElse](#timelocks-hashlocks-ifelse)
          * [Low-level signing](#low-level-signing)
    * [Contributing and running tests](#contributing-and-running-tests)
-   * [Roadmap to v1](#roadmp-to-v1)
+   * [Roadmap to v1](#roadmap-to-v1)
    * [TODO](#todo)
 
 
