@@ -623,7 +623,7 @@ for example:
 ...                              ins=[TxIn(txid=to_spend.txid,
 ...                                        txout=0,
 ...                                        script_sig=ScriptSig.empty(),
-...                                        sequence=Sequence.max())]
+...                                        sequence=Sequence.max())],
 ...                              outs=[TxOut(value=100000,
 ...                                          n=0,
 ...                                          script_pubkey=P2pkhScript(pubk))],
