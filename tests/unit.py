@@ -58,6 +58,7 @@ segwit_hashes = get_data('segwit_hashes')
 wif = get_data('wif')
 p2wpkh_over_p2sh = get_data("p2wpkh_over_p2sh")
 p2wsh_over_p2sh = get_data("p2wsh_over_p2sh")
+serialization_data = get_data('stack_data/serialization')
 
 
 class TestB58(unittest.TestCase):
@@ -105,7 +106,7 @@ class TestPrivPubHashAddrP2pkhSegwit(unittest.TestCase):
             priv = PrivateKey.from_wif(data['privkey'])
             pub = PublicKey.unhexlify(data['pubkey'])
             pubhash = bytearray(unhexlify(data['pubkeyhash']))
-            address = Address.from_string(data['address'], check_network=False)
+            address = Address.from_string(data['address'], strict=False)
             p2pkhhex = data['scriptpubkey']
             segwit_addr = data['segwit']
 
@@ -136,8 +137,8 @@ class TestHD(unittest.TestCase):
     def test_hd(self):
         masterpriv = None
         for data in hd_keys:
-            priv = ExtendedKey.decode(data['prv'], check_network=False)
-            pub = ExtendedKey.decode(data['pub'], check_network=False)
+            priv = ExtendedKey.decode(data['prv'], strict=False)
+            pub = ExtendedKey.decode(data['pub'], strict=False)
             if data['path'] == 'm':
                 masterpriv = priv
             self.assertEqual(priv.pub().encode(mainnet=True), pub.encode(mainnet=True))
@@ -148,8 +149,8 @@ class TestHD(unittest.TestCase):
             self.assertEqual(derived.pub().encode(mainnet=True), data['pub'])
 
     def test_priv_pub(self):
-        masterpub = ExtendedPublicKey.decode(hd_keys[0]['pub'], check_network=False)
-        masterpriv = ExtendedPublicKey.decode(hd_keys[0]['prv'], check_network=False)
+        masterpub = ExtendedPublicKey.decode(hd_keys[0]['pub'], strict=False)
+        masterpriv = ExtendedPublicKey.decode(hd_keys[0]['prv'], strict=False)
         pubs = [masterpub]
         privs = [masterpriv]
         paths = ['m/0/1/2147483646/2',
@@ -254,7 +255,7 @@ class TestSegWitAddress(unittest.TestCase):
 
     def test_valid(self):
         for data in segwit_valid_addresses:
-            address = SegWitAddress.from_string(data['address'], check_network=False)
+            address = SegWitAddress.from_string(data['address'], strict=False)
             script = ScriptBuilder.identify(data['script'])
             self.assertEqual(address.hash, script.address().hash)
             if len(data['script']) == 44:
@@ -265,7 +266,7 @@ class TestSegWitAddress(unittest.TestCase):
     def test_invalid(self):
         for address in segwit_invalid_addresses:
             with self.assertRaises(CouldNotDecode):
-                print(SegWitAddress.from_string(address, check_network=False))
+                print(SegWitAddress.from_string(address, strict=False))
 
 
 class TestSegwitOverP2sh(unittest.TestCase):
@@ -339,6 +340,15 @@ class TestStackData(unittest.TestCase):
                 self.assertTrue(push_op[0] == 78)
                 self.assertTrue(int.from_bytes(push_op[1:5], 'little') == len(data))
 
+    def test_basic(self):
+        for item in serialization_data:
+            if 'int' in item:
+                data = StackData.from_int(item['int'])
+            else:
+                push_op, data = item['data']
+                data = StackData(push_op, unhexlify(data))
+            self.assertEqual(Witness([data]).hexlify(), item['hex'])
+
     def test_failure(self):
         for size in self.fail_sizes:
             with patch('btcpy.structs.script.len', return_value=size, create=True):
@@ -362,7 +372,7 @@ class TestKeys(unittest.TestCase):
             self.assertEqual(str(PrivateKey.from_wif(priv).pub().to_address(mainnet=False)),
                              addr)
             self.assertEqual(PrivateKey.from_wif(priv).pub().hash(),
-                             Address.from_string(addr, check_network=False).hash)
+                             Address.from_string(addr, strict=False).hash)
 
     def test_derivation(self):
         m = ExtendedPrivateKey.decode(privk['master'])
@@ -371,7 +381,7 @@ class TestKeys(unittest.TestCase):
 
     def test_to_wif(self):
         for w in wif:
-            self.assertEqual(PrivateKey.from_wif(w['wif'], check_network=False).hexlify(), w['hex'])
+            self.assertEqual(PrivateKey.from_wif(w['wif'], strict=False).hexlify(), w['hex'])
             priv = PrivateKey.unhexlify(w['hex'])
             if not w['compressed']:
                 priv.public_compressed = False
@@ -405,7 +415,7 @@ class TestPrivKey(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         from ecdsa import SigningKey, SECP256k1
         super().__init__(*args, **kwargs)
-        self.privs = [ExtendedPrivateKey.decode(k[1], check_network=False).key for k in keys]
+        self.privs = [ExtendedPrivateKey.decode(k[1], strict=False).key for k in keys]
         self.vers = [SigningKey.from_string(p.key, curve=SECP256k1).get_verifying_key() for p in self.privs]
 
     def test_raw_sig_success(self):
@@ -431,8 +441,8 @@ class TestPrivKey(unittest.TestCase):
 
     def test_derivation_success(self):
         for pub, priv in keys:
-            pu = ExtendedPublicKey.decode(pub, check_network=False).key
-            pr = ExtendedPrivateKey.decode(priv, check_network=False).key
+            pu = ExtendedPublicKey.decode(pub, strict=False).key
+            pr = ExtendedPrivateKey.decode(priv, strict=False).key
             self.assertTrue(pr.pub() == pu)
             self.assertTrue(pr.pub().hexlify() == pu.hexlify())
 
@@ -825,7 +835,7 @@ class TestAddress(unittest.TestCase):
 
     def test_success(self):
         for net, addr_type, address, hashed_data in self.good_addresses:
-            from_string = Address.from_string(address, check_network=False)
+            from_string = Address.from_string(address, strict=False)
             self.assertTrue(address == str(from_string))
             self.assertTrue(from_string.__class__ == addr_type)
             self.assertTrue(from_string.network == net)
@@ -834,13 +844,13 @@ class TestAddress(unittest.TestCase):
     def test_fail(self):
         for address in self.bad_addresses:
             with self.assertRaises(ValueError):
-                Address.from_string(address, check_network=False)
+                Address.from_string(address, strict=False)
 
     def test_conversions(self):
         for address, pkh in addresses:
-            self.assertEqual(hexlify(Address.from_string(address, check_network=False).hash).decode(), pkh)
+            self.assertEqual(hexlify(Address.from_string(address, strict=False).hash).decode(), pkh)
             self.assertEqual(str(P2pkhScript(bytearray(unhexlify(pkh))).address(mainnet=True)), address)
-            self.assertEqual(P2pkhScript(Address.from_string(address, check_network=False)).pubkeyhash,
+            self.assertEqual(P2pkhScript(Address.from_string(address, strict=False)).pubkeyhash,
                              bytearray(unhexlify(pkh)))
             self.assertEqual(P2pkhAddress(bytearray(unhexlify(pkh)), mainnet=True).hash, bytearray(unhexlify(pkh)))
 
@@ -879,8 +889,8 @@ class TestStandardness(unittest.TestCase):
                 PublicKey.unhexlify("02c08786d63f78bd0a6777ffe9c978cf5899756cfc32bfad09a89e211aeb926242"),
                 PublicKey.unhexlify("033e81519ecf373ea3a5c7e1c051b71a898fb3438c9550e274d980f147eb4d069d"),
                 PublicKey.unhexlify("036d568125a969dc78b963b494fa7ed5f20ee9c2f2fc2c57f86c5df63089f2ed3a"),
-                3
-            ).is_standard()
+                3,
+                strict=False).is_standard()
         )
         # >80-byte data
         self.assertFalse(NulldataScript(StackData.unhexlify(
@@ -1016,6 +1026,140 @@ class TestSegwitSigs(unittest.TestCase):
                         self.assertEqual(hexlify(PrivateKey.unhexlify(txin['privk']).sign(bytearray(unhexlify(txin['digest'])),
                                                                                           deterministic=True)).decode(),
                                          tx['signature'])
+
+
+class TestStrictMode(unittest.TestCase):
+
+    def setUp(self):
+        from btcpy.setup import get_state
+        self.prev_setup = get_state()
+
+    def tearDown(self):
+        setup(self.prev_setup['netname'], strict=self.prev_setup['strict'], force=True)
+
+    def test_multisig_parsing_non_strict(self):
+        setup(self.prev_setup['netname'], strict=False, force=True)
+
+        # 1 of 2 with one valid and one invalid public key
+        script_hex = ('5121037953dbf08030f67352134992643d033417eaa6fcfb770c038f364ff40d7615882100e8f87dd9d24c3a2f1'
+                      '02a5a8276c4a8f58176c961dada423b61063a312b7c270e52ae')
+        script = ScriptBuilder.identify(script_hex)
+        self.assertTrue(isinstance(script, MultisigScript))
+        self.assertEqual(script.type, 'multisig')
+        self.assertTrue(isinstance(script.pubkeys[0], PublicKey))
+        self.assertTrue(isinstance(script.pubkeys[1], StackData))
+
+        # 1 of 2 with two invalid public keys
+        script_hex = ('512100e8f87dd9d24c3a2f102a5a8276c4a8f58176c961dada423b61063a312b7c270e2100e8f87dd9d24c3a2f1'
+                      '02a5a8276c4a8f58176c961dada423b61063a312b7c270e52ae')
+        script = ScriptBuilder.identify(script_hex)
+        self.assertTrue(isinstance(script, MultisigScript))
+        self.assertEqual(script.type, 'multisig')
+        self.assertTrue(isinstance(script.pubkeys[0], StackData))
+        self.assertTrue(isinstance(script.pubkeys[1], StackData))
+
+        # 2 of 2 with one valid and one invalid public key
+        script_hex = ('5221037953dbf08030f67352134992643d033417eaa6fcfb770c038f364ff40d7615882100e8f87dd9d24c3a2f1'
+                      '02a5a8276c4a8f58176c961dada423b61063a312b7c270e52ae')
+        script = ScriptBuilder.identify(script_hex)
+        self.assertTrue(isinstance(script, MultisigScript))
+        self.assertEqual(script.type, 'multisig')
+        self.assertTrue(isinstance(script.pubkeys[0], PublicKey))
+        self.assertTrue(isinstance(script.pubkeys[1], StackData))
+
+    def test_multisig_parsing_strict(self):
+        setup(self.prev_setup['netname'], strict=True, force=True)
+
+        # 1 of 2 with one valid and one invalid public key
+        script_hex = ('5121037953dbf08030f67352134992643d033417eaa6fcfb770c038f364ff40d7615882100e8f87dd9d24c3a2f1'
+                      '02a5a8276c4a8f58176c961dada423b61063a312b7c270e52ae')
+        script = ScriptBuilder.identify(script_hex)
+        self.assertTrue(isinstance(script, MultisigScript))
+        self.assertEqual(script.type, 'multisig')
+        self.assertTrue(isinstance(script.pubkeys[0], PublicKey))
+        self.assertTrue(isinstance(script.pubkeys[1], StackData))
+
+        # 1 of 2 with two invalid public keys
+        script_hex = ('512100e8f87dd9d24c3a2f102a5a8276c4a8f58176c961dada423b61063a312b7c270e2100e8f87dd9d24c3a2f1'
+                      '02a5a8276c4a8f58176c961dada423b61063a312b7c270e52ae')
+        script = Script.unhexlify(script_hex)
+        with self.assertRaises(WrongPubKeyFormat):
+            MultisigScript(script)
+
+        # 2 of 2 with one valid and one invalid public key
+        script_hex = ('5221037953dbf08030f67352134992643d033417eaa6fcfb770c038f364ff40d7615882100e8f87dd9d24c3a2f1'
+                      '02a5a8276c4a8f58176c961dada423b61063a312b7c270e52ae')
+        script = Script.unhexlify(script_hex)
+        with self.assertRaises(WrongPubKeyFormat):
+            MultisigScript(script)
+
+    def test_multisig_creation_strict(self):
+        setup(self.prev_setup['netname'], strict=True, force=True)
+        with self.assertRaises(WrongPubKeyFormat):
+            MultisigScript(1, StackData.unhexlify('00'*33), StackData.unhexlify('00'*33), 2)
+
+        script = MultisigScript(1,
+                                StackData.unhexlify('00'*33),
+                                PublicKey.unhexlify('0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff'),
+                                2)
+        self.assertTrue(isinstance(script, MultisigScript))
+        self.assertEqual(script.type, 'multisig')
+        self.assertTrue(isinstance(script.pubkeys[0], StackData))
+        self.assertTrue(isinstance(script.pubkeys[1], PublicKey))
+
+    def test_multisig_creation_non_strict(self):
+        setup(self.prev_setup['netname'], strict=False, force=True)
+
+        script = MultisigScript(1, StackData.unhexlify('00'*33), StackData.unhexlify('00'*33), 2)
+        self.assertTrue(isinstance(script, MultisigScript))
+        self.assertEqual(script.type, 'multisig')
+        self.assertTrue(isinstance(script.pubkeys[0], StackData))
+        self.assertTrue(isinstance(script.pubkeys[1], StackData))
+
+        script = MultisigScript(1,
+                                StackData.unhexlify('00'*33),
+                                PublicKey.unhexlify('0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff'),
+                                2)
+        self.assertTrue(isinstance(script, MultisigScript))
+        self.assertEqual(script.type, 'multisig')
+        self.assertTrue(isinstance(script.pubkeys[0], StackData))
+        self.assertTrue(isinstance(script.pubkeys[1], PublicKey))
+
+        with self.assertRaises(WrongScriptTypeException):
+            MultisigScript(1, StackData.unhexlify('00'*2), StackData.unhexlify('00'*33), 2)
+
+    def test_p2pk_parsing_non_strict(self):
+        setup(self.prev_setup['netname'], strict=False, force=True)
+        script_hex = '2100e8f87dd9d24c3a2f102a5a8276c4a8f58176c961dada423b61063a312b7c270eac'
+        script = ScriptBuilder.identify(script_hex)
+        self.assertTrue(isinstance(script, P2pkScript))
+        self.assertEqual(script.type, 'p2pk')
+        self.assertTrue(isinstance(script.pubkey, StackData))
+
+    def test_p2pk_parsing_strict(self):
+        setup(self.prev_setup['netname'], strict=True, force=True)
+        script_hex = '2100e8f87dd9d24c3a2f102a5a8276c4a8f58176c961dada423b61063a312b7c270eac'
+        script = Script.unhexlify(script_hex)
+        with self.assertRaises(WrongPubKeyFormat):
+            P2pkScript(script)
+
+    def test_p2pk_creation_strict(self):
+        setup(self.prev_setup['netname'], strict=True, force=True)
+        with self.assertRaises(TypeError):
+            P2pkScript(StackData.unhexlify('00'*33))
+
+    def test_p2pk_creation_non_strict(self):
+        setup(self.prev_setup['netname'], strict=False, force=True)
+        script = P2pkScript(StackData.unhexlify('00'*33))
+        self.assertTrue(isinstance(script, P2pkScript))
+        self.assertEqual(script.type, 'p2pk')
+        self.assertTrue(isinstance(script.pubkey, StackData))
+
+        with self.assertRaises(WrongScriptTypeException):
+            P2pkScript(StackData.unhexlify('00'*30))
+
+
+
 
 
 if __name__ == '__main__':
