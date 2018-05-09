@@ -101,9 +101,20 @@ interface, while objects located in `btcpy.lib` are used internally.
 
 # Usage examples
 
-## Network setup
-The first thing to do the first time this package is imported is to set the
-network on which it has to work. This is achieved by doing:
+## Setup
+The first thing to do the first time this package is imported is to set a global state which
+indicates on which network you are working and wether you want strict mode enabled.
+These two settings are further explained in the following sections.
+
+To setup `btcpy`, you can use the following function
+
+```python
+from btcpy.setup import setup
+setup('regtest', strict=True)
+```
+
+### Network
+You can setup the network you will work on by calling:
 
 ```python
 from btcpy.setup import setup
@@ -116,10 +127,35 @@ supported network types are:
     testnet
     mainnet
 
-The `btcpy.setup` module also provides the following functions:
+The `btcpy.setup` module also provides the following network-related functions:
 
     is_mainnet() - returns True if 'mainnet' was selected, False otherwise
     net_name()   - returns the value that was selected when calling setup()
+
+### Strictness
+`btcpy` never performs validation. However, we don't want you to inadvertently lose your funds
+for a mistake, so, in strict mode, when you do something that looks dangerous, the library
+always makes sure that you know exactly what you are doing.
+
+To setup the library in strict mode, you can run the setup as follows:
+
+```python
+setup(my_network, strict=True)  # True is actually the default for strict mode, the only other option is False
+```
+
+Additionally, you can force (non-)strictness on specific functions that have a `strict=None`
+as keyword argument. If the `strict` keyword argument is left to `None`, then the strictness
+specified in the `setup` will be followed, otherwise the param you pass to `strict` will be used.
+
+Which additional checks are done when in `strict` mode:
+* Do not allow to create `P2pkscript`s with public keys that have an invalid format (please note that
+during parsing such scripts will not even be recognised as scripts of type `'p2pk'`
+when strict mode is enabled, they will instead be recognised as of type `'nonstandard'`)
+* Do not allow to create m-of-n `MultisigScript`s with less than `m` public keys that have a valid format
+(please note that during parsing such scripts will not even be recognised as scripts of type `'multisig'`
+when strict mode is enabled, they will instead be recognised as of type `'nonstandard'`)
+* Do not allow to decode `ExtendedPublicKeys` or `ExtendedPrivateKeys` that don't match the network you set in `setup`
+* Do not allow to decode `Address`es that don't match the network you set in `setup`
     
 ## Parsing and serialization
 `Transaction`, `PublicKey`, `PrivateKey` and `Block` can be extracted
