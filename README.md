@@ -150,8 +150,8 @@ Additionally, you can force (non-)strictness on specific functions that have a `
 as keyword argument. If the `strict` keyword argument is left to `None`, then the strictness
 specified in the `setup` will be followed, otherwise the param you pass to `strict` will be used.
 
-Which additional checks are done when in `strict` mode:
-* Do not allow to create `P2pkscript`s with public keys that have an invalid format (please note that
+The following additional checks are done when in `strict` mode:
+* Do not allow to create `P2pkScript`s with public keys that have an invalid format (please note that
 during parsing such scripts will not even be recognised as scripts of type `'p2pk'`
 when strict mode is enabled, they will instead be recognised as of type `'nonstandard'`)
 * Do not allow to create m-of-n `MultisigScript`s with less than `m` public keys that have a valid format
