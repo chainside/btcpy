@@ -15,6 +15,7 @@ Bitcoin scripts.
 a production environment. Also, as long as the version is 0.\*, API breaking changes
 should be expected**
 
+
 Table of Contents
 =================
 
@@ -26,7 +27,9 @@ Table of Contents
    * [What it does not do](#what-it-does-not-do)
    * [Structure](#structure)
    * [Usage examples](#usage-examples)
-      * [Network setup](#network-setup)
+      * [Setup](#setup)
+         * [Network](#network)
+         * [Strictness](#strictness)
       * [Parsing and serialization](#parsing-and-serialization)
       * [Keys](#keys)
          * [HD keys](#hd-keys)
