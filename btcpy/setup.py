@@ -13,16 +13,40 @@ networks = {'mainnet', 'testnet', 'regtest'}
 
 MAINNET = None
 NETNAME = None
+STRICT = None
 
 
-def setup(network='mainnet', force=False):
-    global MAINNET, NETNAME
-    if MAINNET is not None and NETNAME != network and not force:
-        raise ValueError('Trying to change network type at runtime')
+def setup(network='mainnet', strict=True, force=False):
+    global MAINNET, NETNAME, STRICT
+
+    prev_state = get_state()
+
+    if (MAINNET is not None and NETNAME != network) or (STRICT is not None and strict != is_strict()):
+        if not force:
+            raise ValueError('Trying to change network type at runtime')
+
     if network not in networks:
         raise ValueError('Unknown network type: {}'.format(network))
+
     MAINNET = (network == 'mainnet')
     NETNAME = network
+    STRICT = strict
+
+    return prev_state
+
+
+def get_state():
+    global MAINNET, NETNAME, STRICT
+    return {'netname': NETNAME,
+            'mainnet': MAINNET,
+            'strict': STRICT}
+
+
+def is_strict():
+    global STRICT
+    if STRICT is None:
+        ValueError('Strictness not set')
+    return STRICT
 
 
 def is_mainnet():
