@@ -879,3 +879,7 @@ done eventually:
 * Add further transaction creation helpers
 * Add RPC calls to Bitcoin Core nodes
 * Add networking with Bitcoin Core nodes
+
+# Acknowledgements
+Special thanks to [gdecicco](https://github.com/gdecicco) and [lorenzogiust](https://github.com/lorenzogiust)
+for contributing with performance improvements and general review.
