@@ -149,6 +149,10 @@ privk = PrivateKey.unhexlify(privk_hex)
 >>> pub.key.hexlify()
 '025f628d7a11ace2a6379119a778240cb70d6e720750416bb36f824514fbe88260'
 ```
+`PrivateKey` can also be extracted from a Wallet Import Format by doing:
+```python
+privk = PrivateKey.form_wif(wif_key)
+```
 
 All these structures can be converted back to hex by using their `hexlify()` method.
 
