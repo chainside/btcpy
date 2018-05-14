@@ -527,7 +527,7 @@ parameters:
 
 | Class                         | Description |Parameters      |
 | ----------------------------- | ----------- | -------------- |
-| `P2pkhscript`, `P2wpkhScript` | A P2PKH/P2WPKH script | Either a `PublickKey`, a `bytearray` representing a public key hash or an `Address`           |
+| `P2pkhScript`, `P2wpkhScript` | A P2PKH/P2WPKH script | Either a `PublickKey`, a `bytearray` representing a public key hash or an `Address`           |
 | `P2shScript`                  | A P2SH script  | Either a `ScriptPubKey` representing the redeemScript, a `bytearray` representing the redeemScript's hash or an `Address`   |
 | `P2wshScript`                 | A P2WSH script | Either a `ScriptPubKey` representing the witnessScript, a `bytearray` representing the witnessScript's hash or an `Address`  |
 | `P2pkScript`                  | A P2PK script | A `PublicKey` |
