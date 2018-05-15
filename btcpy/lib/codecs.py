@@ -13,7 +13,7 @@ from abc import ABCMeta, abstractmethod
 from .base58 import b58encode_check, b58decode_check
 
 from .bech32 import decode, encode
-from ..setup import is_mainnet, net_name, is_strict
+from ..setup import is_mainnet, net_name, strictness
 from ..constants import Constants
 from ..structs.address import Address, P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
 
@@ -58,9 +58,8 @@ class Base58Codec(Codec):
         return b58encode_check(bytes(prefix + address.hash))
 
     @staticmethod
+    @strictness
     def decode(string, strict=None):
-        if strict is None:
-            strict = is_strict()
 
         try:
             addr_type, network = Constants.get('base58.prefixes')[string[0]]
@@ -95,10 +94,8 @@ class Bech32Codec(Codec):
         return encode(prefix, address.version, address.hash)
 
     @staticmethod
+    @strictness
     def decode(string, strict=None):
-
-        if strict is None:
-            strict = is_strict()
 
         if not string:
             raise CouldNotDecode('Impossible to decode empty string')

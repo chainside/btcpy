@@ -23,7 +23,7 @@ from ..lib.parsing import Stream, Parser
 from ..setup import is_mainnet
 from .crypto import PrivateKey, PublicKey
 from ..constants import Constants
-from ..setup import is_strict
+from ..setup import strictness
 
 
 class ExtendedKey(HexSerializable, metaclass=ABCMeta):
@@ -37,10 +37,8 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         return cls(key, chaincode, 0, cls.master_parent_fingerprint, 0, hardened=True)
 
     @classmethod
+    @strictness
     def decode(cls, string, strict=None):
-
-        if strict is None:
-            strict = is_strict()
 
         if string[0] == Constants.get('xkeys.prefixes')['mainnet']:
             mainnet = True

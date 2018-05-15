@@ -20,7 +20,7 @@ from ..lib.parsing import ScriptParser, Parser, Stream, UnexpectedOperationFound
 from ..lib.opcodes import OpCodeConverter
 from .crypto import WrongPubKeyFormat, PublicKey
 from .address import P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
-from ..setup import is_strict
+from ..setup import strictness
 
 
 class WrongScriptTypeException(Exception):
@@ -645,15 +645,13 @@ class P2pkScript(ScriptPubKey):
 
     template = '<33|65> OP_CHECKSIG'
 
+    @strictness
     def __init__(self, param, strict=None):
         """
         :param param: can be either of type `Script` or `PublicKey`.
         In the first case it is verified and the public key is extracted.
         In the second case the script is built from the public key
         """
-        if strict is None:
-            strict = is_strict()
-
         if isinstance(param, Script):
             pubkey = self.verify(param.body)
 
@@ -669,7 +667,7 @@ class P2pkScript(ScriptPubKey):
             object.__setattr__(self, 'pubkey', param)
             super().__init__(self.compile('{} OP_CHECKSIG'.format(self.pubkey.hexlify())))
         elif isinstance(param, StackData):
-            if is_strict():
+            if strict:
                 raise TypeError('Must provide an object of type PublicKey in strict mode')
             if len(param) not in (33, 65):
                 raise WrongScriptTypeException('Public keys must be either 33 or 65 bytes long')
@@ -750,10 +748,8 @@ class MultisigScript(ScriptPubKey):
         return valid
 
     @classmethod
+    @strictness
     def verify(cls, bytes_, strict=None):
-
-        if strict is None:
-            strict = is_strict()
 
         parser = ScriptParser(bytes_)
         if not bytes_:
@@ -777,6 +773,7 @@ class MultisigScript(ScriptPubKey):
 
         return [int(m), *pubkeys, int(n)]
 
+    @strictness
     def __init__(self, *args, strict=None):
         """
         :param args: if one arg is provided that is interpreted as a precompiled script which needs
@@ -785,16 +782,13 @@ class MultisigScript(ScriptPubKey):
         If more than one arg is provided, we assume that the parameters are `m, pubkey1, ..., pubkeyn, n`.
         """
 
-        if strict is None:
-            strict = is_strict()
-
         if len(args) == 0:
             raise TypeError('Wrong number of params for MultisigScript __init__: {}'.format(len(args)))
         if len(args) == 1:
             # we expect something of type Script
             script = args[0]
             super().__init__(script.body)
-            m, *pubkeys, n = self.verify(script.body, strict)
+            m, *pubkeys, n = self.verify(script.body, strict=strict)
         else:
             m, *pubkeys, n = args
 

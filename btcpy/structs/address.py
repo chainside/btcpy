@@ -11,7 +11,7 @@
 
 from abc import ABCMeta, abstractmethod
 
-from ..setup import is_mainnet, is_strict
+from ..setup import is_mainnet, strictness
 
 
 class WrongScriptType(Exception):
@@ -21,11 +21,9 @@ class WrongScriptType(Exception):
 class BaseAddress(metaclass=ABCMeta):
 
     @staticmethod
+    @strictness
     def is_valid(string, strict=None):
         from ..lib.codecs import CouldNotDecode
-
-        if strict is None:
-            strict = is_strict()
 
         try:
             Address.from_string(string, strict=strict)
@@ -53,10 +51,9 @@ class BaseAddress(metaclass=ABCMeta):
         raise NotImplemented
 
     @classmethod
+    @strictness
     def from_string(cls, string, strict=None):
-        if strict is None:
-            strict = is_strict()
-        return cls.get_codec().decode(string, strict)
+        return cls.get_codec().decode(string, strict=strict)
 
     @classmethod
     def hash_length(cls):

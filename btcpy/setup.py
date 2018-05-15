@@ -9,11 +9,22 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE.md file.
 
+from functools import wraps
+
 networks = {'mainnet', 'testnet', 'regtest'}
 
 MAINNET = None
 NETNAME = None
 STRICT = None
+
+
+def strictness(func):
+    @wraps(func)
+    def wrapper(*args, strict=None, **kwargs):
+        if strict is None:
+            strict = is_strict()
+        return func(*args, **kwargs, strict=strict)
+    return wrapper
 
 
 def setup(network='mainnet', strict=True, force=False):

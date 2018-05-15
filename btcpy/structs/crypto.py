@@ -19,7 +19,7 @@ from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import P2pkhAddress, P2wpkhAddress
-from ..setup import is_mainnet, net_name, is_strict
+from ..setup import is_mainnet, net_name, strictness
 from ..constants import Constants
 
 
@@ -36,10 +36,8 @@ class PrivateKey(Key):
     highest_s = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
     @staticmethod
+    @strictness
     def from_wif(wif, strict=None):
-
-        if strict is None:
-            strict = is_strict()
 
         if not 51 <= len(wif) <= 52:
             raise ValueError('Invalid wif length: {}'.format(len(wif)))
