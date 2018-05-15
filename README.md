@@ -189,6 +189,10 @@ privk = PrivateKey.unhexlify(privk_hex)
 >>> pub.key.hexlify()
 '025f628d7a11ace2a6379119a778240cb70d6e720750416bb36f824514fbe88260'
 ```
+`PrivateKey` can also be extracted from a Wallet Import Format by doing:
+```python
+>>> privk = PrivateKey.form_wif(wif_key)
+```
 
 All these structures can be converted back to hex by using their `hexlify()` method.
 
@@ -556,14 +560,14 @@ based on the minimum needed parameters. In the following sections we will show s
 examples of these features.
 
 The supported scripts can be created by using their constructor and passing them the
-needed parameters. All the constructors of these classes can take an input of type `Script`.
+needed parameters. They can be found in `btcpy.structs.script`. All the constructors of these classes can take an input of type `Script`.
 In this case they try to match it to their template and raise a `WrongScriptTypeException`
 if the script does not match the desired template. Otherwise, they take the following
 parameters:
 
 | Class                         | Description |Parameters      |
 | ----------------------------- | ----------- | -------------- |
-| `P2pkhscript`, `P2wpkhScript` | A P2PKH/P2WPKH script | Either a `PublickKey`, a `bytearray` representing a public key hash or an `Address`           |
+| `P2pkhScript`, `P2wpkhScript` | A P2PKH/P2WPKH script | Either a `PublickKey`, a `bytearray` representing a public key hash or an `Address`           |
 | `P2shScript`                  | A P2SH script  | Either a `ScriptPubKey` representing the redeemScript, a `bytearray` representing the redeemScript's hash or an `Address`   |
 | `P2wshScript`                 | A P2WSH script | Either a `ScriptPubKey` representing the witnessScript, a `bytearray` representing the witnessScript's hash or an `Address`  |
 | `P2pkScript`                  | A P2PK script | A `PublicKey` |
@@ -580,7 +584,7 @@ documenting, of course this is a very bad practice in a production environment
 and should be avoided at all costs.
 
 ### Spending a transaction
-This library offers `Solver`s to spend a previous transaction's output. Solvers
+This library offers `Solver`s to spend a previous transaction's output. Solvers can be found in `btcpy.structs.sig` and 
 expect as input all the data needed to create the appropriate scriptSig and witness.
 To create a `Solver`, the `Sighash` class is needed. This class represents a SIGHASH
 and its constructor takes two parameters:
@@ -619,6 +623,7 @@ order.
 for example:
 
 ```python
+>>> from btcpy.structs.sig import *
 >>> to_spend = Transaction.unhexlify('...')
 >>> unsigned = MutableTransction(version=1,
 ...                              ins=[TxIn(txid=to_spend.txid,
