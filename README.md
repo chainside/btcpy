@@ -50,6 +50,7 @@ Table of Contents
    * [Contributing and running tests](#contributing-and-running-tests)
    * [Roadmap to v1](#roadmap-to-v1)
    * [TODO](#todo)
+   * [Acknowledgements](#acknowledgements)
 
 
 # Requirements
