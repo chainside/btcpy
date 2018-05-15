@@ -583,6 +583,7 @@ order.
 for example:
 
 ```python
+>>> from btcpy.structs.sig import *
 >>> to_spend = Transaction.unhexlify('...')
 >>> unsigned = MutableTransction(version=1,
 ...                              ins=[TxIn(txid=to_spend.txid,
