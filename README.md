@@ -544,7 +544,7 @@ documenting, of course this is a very bad practice in a production environment
 and should be avoided at all costs.
 
 ### Spending a transaction
-This library offers `Solver`s to spend a previous transaction's output. Solvers
+This library offers `Solver`s to spend a previous transaction's output. Solvers can be found in btcpy.structs.sig and 
 expect as input all the data needed to create the appropriate scriptSig and witness.
 To create a `Solver`, the `Sighash` class is needed. This class represents a SIGHASH
 and its constructor takes two parameters:
