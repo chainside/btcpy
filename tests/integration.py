@@ -311,11 +311,18 @@ class TestSpends(unittest.TestCase):
                                                  (HashlockSolver(preimage, script['solver']),
                                                   emb.instance),
                                                  '{}({})'.format(embedder.get_name(), script['name'])))
-                        else:
+                        elif embedder.get_name() == 'relativetime':
                             emb = embedder(scripts=[script['script']])
                             embedded.append((emb.instance,
                                              (TimelockSolver(script['solver']), emb.instance),
                                              '{}({})'.format(embedder.get_name(), script['name'])))
+                        elif embedder.get_name() == 'absolutetime':
+                            emb = embedder(scripts=[script['script']])
+                            embedded.append((emb.instance,
+                                             (TimelockSolver(script['solver']), emb.instance),
+                                             '{}({})'.format(embedder.get_name(), script['name'])))
+                        else:
+                            raise ValueError('Unknown embedder: {}'.format(embedder.get_name()))
 
         self.all += [s for s in embedded]
 
