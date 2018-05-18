@@ -12,7 +12,7 @@
 from binascii import hexlify, unhexlify
 from decimal import Decimal
 
-from .sig import Sighash
+from .sig import Sighash, AbsoluteTimelockSolver, RelativeTimeLockSolver
 from .script import (ScriptBuilder, P2wpkhV0Script, P2wshV0Script, P2shScript, NulldataScript, ScriptSig,
                      CoinBaseScriptSig, ScriptPubKey)
 from ..lib.types import Immutable, Mutable, Jsonizable, HexSerializable, cached
@@ -26,22 +26,24 @@ class Sequence(Immutable, HexSerializable):
     type_flag_position = 22
     MAX = 0xffffffff
 
-    @staticmethod
-    def max():
-        return Sequence(Sequence.MAX)
+    @classmethod
+    def max(cls):
+        return cls(cls.MAX)
 
-    @staticmethod
-    def create(seq, blocks=True, disable=False):
-        if seq > 0xffff:
-            raise ValueError('Sequence value too high: {}'.format(seq))
+    @classmethod
+    def create(cls, seq, blocks=True, disable=False):
+        if not 0 <= seq <= 0xffff:
+            raise ValueError('Sequence value out of range: {}'.format(seq))
         flags = 0
         if not blocks:
             flags |= 1 << Sequence.type_flag_position
         if disable:
             flags |= 1 << Sequence.disable_flag_position
-        return flags + seq
+        return cls(flags | seq)
 
     def __init__(self, seq):
+        if not 0 <= seq <= self.MAX:
+            raise ValueError('Sequence value out of range: {}'.format(seq))
         object.__setattr__(self, 'seq', seq)
 
     @property
@@ -67,9 +69,77 @@ class Sequence(Immutable, HexSerializable):
         from .script import StackData
         return StackData.from_int(self.seq)
 
+    def is_max(self):
+        return self.seq == self.MAX
+
     @cached
     def serialize(self):
         return bytearray(self.seq.to_bytes(4, 'little'))
+
+    def __lt__(self, other):
+
+        if not isinstance(other, self.__class__):
+            raise TypeError('Comparing {} with {}'.format(self.__class__.__name__, other.__class__.__name__))
+
+        if self.is_blocks() != other.is_blocks():
+            raise ValueError('Trying to compare {}-based sequence with'
+                             '{}-based sequence'.format('height' if self.is_blocks() else 'time',
+                                                        'height' if other.is_blocks() else 'time'))
+        if self.is_active() != other.is_active():
+            raise ValueError('Trying to compare {} sequence with'
+                             '{} sequence'.format('enabled' if self.is_active() else 'disabled',
+                                                  'enabled' if other.is_active() else 'disabled'))
+        return self.n < other.n
+
+    def __eq__(self, other):
+        return (self.is_blocks(), self.is_active(), self.n) == (other.is_blocks(), other.is_active(), other.n)
+
+
+class TimeBasedSequence(Sequence):
+
+    time_unit = 512
+
+    @classmethod
+    def create(cls, seq):
+        return super().create(seq, blocks=False, disable=False)
+
+    @classmethod
+    def from_timedelta(cls, timedelta):
+        """expects a datetime.timedelta object"""
+        from math import ceil
+        units = ceil(timedelta.total_seconds() / cls.time_unit)
+        return cls.create(units)
+
+    def __init__(self, seq):
+
+        super().__init__(seq)
+
+        if self.is_blocks():
+            raise ValueError('Trying to initialise TimeBasedSequence with number expressing block height')
+
+        if not self.is_active():
+            raise ValueError('Trying to initialise TimeBasedSequence with number that has a disable flag set')
+
+    def to_timedelta(self):
+        from datetime import timedelta
+        return timedelta(seconds=self.n * self.time_unit)
+
+
+class HeightBasedSequence(Sequence):
+
+    @classmethod
+    def create(cls, seq):
+        return super().create(seq, blocks=True, disable=False)
+
+    def __init__(self, seq):
+
+        super().__init__(seq)
+
+        if not self.is_blocks():
+            raise ValueError('Trying to initialise TimeBasedSequence with number expressing time')
+
+        if not self.is_active():
+            raise ValueError('Trying to initialise TimeBasedSequence with number that has a disable flag set')
 
 
 # noinspection PyUnresolvedReferences
@@ -83,7 +153,6 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
     def from_json(cls, dic):
-
         if 'coinbase' in dic:
             return CoinBaseTxIn(CoinBaseScriptSig(bytearray(unhexlify(dic['coinbase']['hex']))),
                                 Sequence(int(dic['sequence'])))
@@ -120,7 +189,10 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
         return result.serialize()
 
     def is_replaceable(self):
-        return self.sequence.seq < (0xffffffff - 1)
+        return not self.is_final()
+
+    def is_final(self):
+        return self.sequence.is_max()
 
     def is_standard(self, prev_script=None):
 
@@ -249,8 +321,23 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
 class Locktime(Immutable, HexSerializable):
 
     blocks_threshold = 500000000
+    MAX = 2**32 - 1
+
+    @classmethod
+    def from_datetime(cls, year, month, day, hour=0, minute=0, second=0):
+        """Beware: always assumes UTC times"""
+        from datetime import datetime, timezone
+        dt = datetime(year, month, day, hour=hour, minute=minute, second=second, tzinfo=timezone.utc)
+        timestamp = dt.timestamp()
+        if timestamp < cls.blocks_threshold:
+            raise ValueError('Date is too far in the past')
+        return cls(timestamp)
 
     def __init__(self, n):
+
+        if not 0 <= n <= self.MAX:
+            raise ValueError('Locktime out of range: {}'.format(n))
+
         object.__setattr__(self, 'n', n)
 
     def __str__(self):
@@ -265,9 +352,6 @@ class Locktime(Immutable, HexSerializable):
     def is_active(self):
         return self.n > 0
 
-    def to_json(self):
-        pass
-
     def for_script(self):
         from .script import StackData
         return StackData.from_int(self.n)
@@ -275,6 +359,27 @@ class Locktime(Immutable, HexSerializable):
     @cached
     def serialize(self):
         return bytearray(self.n.to_bytes(4, 'little'))
+
+    def __lt__(self, other):
+
+        if not isinstance(other, self.__class__):
+            raise TypeError('Comparing {} with {}'.format(self.__class__.__name__, other.__class__.__name__))
+
+        if not self.is_active():
+            # self == 0:
+            # if other > 0: self < other (return True)
+            # if other == 0: self == other (return False)
+            return other.is_active()
+
+        if self.is_blocks() != other.is_blocks():
+            raise ValueError('Trying to compare {}-based sequence with'
+                             '{}-based sequence'.format('height' if self.is_blocks() else 'time',
+                                                        'height' if other.is_blocks() else 'time'))
+
+        return self.n < other.n
+
+    def __eq__(self, other):
+        return self.n == other.n
 
 
 # noinspection PyUnresolvedReferences
@@ -550,6 +655,10 @@ class MutableTransaction(Mutable, Transaction):
     def to_segwit(self):
         return MutableSegWitTransaction(self.version, self.ins, self.outs, self.locktime)
 
+    def set_sequence(self, i, solver):
+        if solver.solves_relative_locktime():
+            self.ins[i].sequence = solver.get_relative_locktime()
+
     def spend_single(self, index, txout, solver):
 
         sighashes = solver.get_sighashes()
@@ -571,14 +680,23 @@ class MutableTransaction(Mutable, Transaction):
         self.ins[index].script_sig = script_sig
 
     def spend(self, txouts, solvers):
-        if any(solver.solves_segwit() for solver in solvers):
-            return self.to_segwit().spend(txouts, solvers)
+
         if len(solvers) != len(self.ins) or len(txouts) != len(solvers):
             raise ValueError('{} solvers and {} txouts provided for {} inputs'.format(len(solvers),
                                                                                       len(txouts),
                                                                                       len(self.ins)))
+
+        if any(solver.solves_segwit() for solver in solvers):
+            return self.to_segwit().spend(txouts, solvers)
+
+        locktimes = [solver.get_absolute_locktime() for solver in solvers if solver.solves_absolute_locktime()]
+
+        if locktimes:
+            self.locktime = max(locktimes)
+
         for i, (txout, solver) in enumerate(zip(txouts, solvers)):
             self.spend_single(i, txout, solver)
+            self.set_sequence(i, solver)
 
         return self.to_immutable()
 
@@ -821,8 +939,14 @@ class MutableSegWitTransaction(Mutable, SegWitTransaction):
                                                                                    len(txouts),
                                                                                    len(self.ins)))
 
+        locktimes = [solver.get_absolute_locktime() for solver in solvers if solver.solves_absolute_locktime()]
+
+        if locktimes:
+            self.locktime = max(locktimes)
+
         for i, (txout, solver) in enumerate(zip(txouts, solvers)):
             self.spend_single(i, txout, solver)
+            self.set_sequence(i, solver)
 
         return self.to_immutable()
 
