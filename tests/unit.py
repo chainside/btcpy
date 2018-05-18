@@ -11,12 +11,14 @@
 
 
 import unittest
+from random import random
 from unittest.mock import patch
 
+from btcpy.structs.crypto import PublicKey, PrivateKey
 from btcpy.structs.transaction import *
 from btcpy.structs.script import *
 from btcpy.structs.block import *
-from btcpy.structs.crypto import PublicKey, PrivateKey
+from btcpy.structs.sig import *
 from btcpy.structs.address import Address, SegWitAddress, P2shAddress, P2wshAddress
 from btcpy.lib.codecs import CouldNotDecode
 from btcpy.setup import setup
@@ -36,6 +38,9 @@ def get_data(filename):
         return json.load(infile)
 
 
+locktime_dates = get_data('locktime_dates')
+locktime_ordering = get_data('locktime_ordering')
+sequence_ordering = get_data('sequence_ordering')
 transactions = get_data('rawtxs')
 scripts = get_data('scripts')
 unknownscripts = get_data('unknownscripts')
@@ -59,6 +64,8 @@ wif = get_data('wif')
 p2wpkh_over_p2sh = get_data("p2wpkh_over_p2sh")
 p2wsh_over_p2sh = get_data("p2wsh_over_p2sh")
 serialization_data = get_data('stack_data/serialization')
+sequence_numbers = get_data('sequence')
+sequence_times = get_data('sequence_time')
 
 
 class TestB58(unittest.TestCase):
@@ -293,11 +300,12 @@ class TestSegwitOverP2sh(unittest.TestCase):
 class TestReplace(unittest.TestCase):
 
     def test_success(self):
-        for transaction in transactions:
+        from random import randint
+        for i, transaction in enumerate(transactions):
             tx = MutableTransaction.unhexlify(transaction['raw'])
             self.assertEqual(tx.is_replaceable(), transaction['replaceable'])
-            if len(tx.ins) > 2:
-                tx.ins[1].sequence = Sequence(0xfffffffd)
+            if len(tx.ins) > 2 and not transaction['replaceable']:
+                tx.ins[1].sequence = Sequence(randint(0, 0xfffffffe))
                 self.assertTrue(tx.ins[1].is_replaceable())
                 self.assertFalse(tx.ins[2].is_replaceable())
                 self.assertTrue(tx.is_replaceable())
@@ -768,6 +776,80 @@ class TestTimelock(unittest.TestCase):
                                                        self.locked_script.hexlify()))
 
 
+class TestSequence(unittest.TestCase):
+
+    @staticmethod
+    def td_compare(td1, td2):
+        """in our case two timedeltas are equal if they differ by no more than 512*2 seconds"""
+        return int(td1.total_seconds()) in range(max(int(td2.total_seconds()) - 512, 0),
+                                                 int(td2.total_seconds()) + 512 + 1)
+
+    def test_baseclass(self):
+        for data in sequence_numbers:
+            created = Sequence.create(**data['params'])
+            self.assertEqual(created.seq, data['sequence'])
+            self.assertEqual(created.n, data['params']['seq'])
+            self.assertEqual(not created.is_active(), data['params']['disable'])
+            self.assertEqual(created.is_blocks(), data['params']['blocks'])
+            self.assertEqual(not created.is_time(), data['params']['blocks'])
+
+    def test_timebased(self):
+        for data in sequence_numbers:
+            if data['params']['blocks'] or data['params']['disable']:
+                with self.assertRaises(ValueError):
+                    TimeBasedSequence(data['sequence'])
+            else:
+                created = TimeBasedSequence.create(data['params']['seq'])
+                self.assertTrue(created.is_time())
+                self.assertFalse(created.is_blocks())
+                self.assertTrue(created.is_active())
+
+    def test_timedeltas(self):
+        from datetime import timedelta
+        for data in sequence_times:
+            td = timedelta(**data['date'])
+            seq = TimeBasedSequence.from_timedelta(td)
+            self.assertTrue(self.td_compare(seq.to_timedelta(), td))
+
+    def test_heightbased(self):
+        for data in sequence_numbers:
+            if (not data['params']['blocks']) or data['params']['disable']:
+                with self.assertRaises(ValueError):
+                    HeightBasedSequence(data['sequence'])
+            else:
+                created = HeightBasedSequence.create(data['params']['seq'])
+                self.assertFalse(created.is_time())
+                self.assertTrue(created.is_blocks())
+                self.assertTrue(created.is_active())
+
+    def test_lt(self):
+        for data in sequence_ordering:
+            if data['outcome'] == 'error':
+                with self.assertRaisesRegex(ValueError, data['error_regex']):
+                    max([Sequence(x) for x in data['data']])
+            else:
+                self.assertEqual(max([Sequence(x) for x in data['data']]), Sequence(data['outcome']))
+
+
+class TestLocktime(unittest.TestCase):
+
+    def test_lt(self):
+        for data in locktime_ordering:
+            if data['outcome'] == 'error':
+                with self.assertRaises(ValueError):
+                    max([Locktime(x) for x in data['data']])
+            else:
+                self.assertEqual(max([Locktime(x) for x in data['data']]), Locktime(data['outcome']))
+
+    def test_dates(self):
+        for data in locktime_dates:
+            if data['timestamp'] == 'error':
+                with self.assertRaises(ValueError):
+                    Locktime.from_datetime(**data['data'])
+            else:
+                self.assertEqual(Locktime.from_datetime(**data['data']).n, data['timestamp'])
+
+
 class TestRelativeTimelock(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
@@ -1159,7 +1241,129 @@ class TestStrictMode(unittest.TestCase):
             P2pkScript(StackData.unhexlify('00'*30))
 
 
+class TestSolvers(unittest.TestCase):
 
+    def test_nested_locktimes(self):
+        pubk = PublicKey.unhexlify('021c703de670b3b0df446e948f76acecd6e539a6a395b408bbcd711e2744b74a7b')
+        privk = PrivateKey.unhexlify('e2cf56175f5cd5f19e9d1599b99463d769c6e16f1753dfa18aab64cbabeb7b7d')
+        script = IfElseScript(
+            TimelockScript(
+                Locktime(2000),
+                RelativeTimelockScript(
+                    Sequence(5),
+                    P2pkScript(pubk)
+                )
+            ),
+            P2pkScript(pubk)
+        )
+        p2wsh = P2wshV0Script(script)
+        p2sh = P2shScript(p2wsh)
+        solver = P2shSolver(
+            p2wsh,
+            P2wshV0Solver(
+                script,
+                IfElseSolver(
+                    Branch.IF,
+                    AbsoluteTimelockSolver(
+                        Locktime(2000),
+                        RelativeTimeLockSolver(
+                            Sequence(5),
+                            P2pkSolver(privk)
+                        )
+                    )
+                )
+            )
+        )
+        self.assertTrue(solver.solves_absolute_locktime())
+        self.assertTrue(solver.solves_relative_locktime())
+        self.assertEqual(solver.get_absolute_locktime(), Locktime(2000))
+        self.assertEqual(solver.get_relative_locktime(), Sequence(5))
+
+        preimage = Stream(bytearray([0]*30))
+        hash160 = preimage.hash160()
+        hash256 = preimage.hash256()
+        script = IfElseScript(
+            TimelockScript(
+                Locktime(2000),
+                Hashlock160Script(
+                    hash160,
+                    RelativeTimelockScript(
+                        Sequence(5),
+                        Hashlock256Script(
+                            hash256,
+                            TimelockScript(
+                                Locktime(3000),
+                                RelativeTimelockScript(
+                                    Sequence(10),
+                                    P2pkScript(pubk)
+                                )
+                            )
+                        )
+                    )
+                )
+            ),
+            P2pkScript(pubk)
+        )
+        p2wsh = P2wshV0Script(script)
+        p2sh = P2shScript(p2wsh)
+        solver = P2shSolver(
+            p2wsh,
+            P2wshV0Solver(
+                script,
+                IfElseSolver(
+                    Branch.IF,
+                    AbsoluteTimelockSolver(
+                        Locktime(2000),
+                        HashlockSolver(
+                            preimage.serialize(),
+                            RelativeTimeLockSolver(
+                                Sequence(5),
+                                HashlockSolver(
+                                    preimage.serialize(),
+                                    AbsoluteTimelockSolver(
+                                        Locktime(3000),
+                                        RelativeTimeLockSolver(
+                                            Sequence(10),
+                                            P2pkSolver(privk)
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        self.assertTrue(solver.solves_absolute_locktime())
+        self.assertTrue(solver.solves_relative_locktime())
+        self.assertEqual(solver.get_absolute_locktime(), Locktime(3000))
+        self.assertEqual(solver.get_relative_locktime(), Sequence(10))
+
+        tx = MutableTransaction(
+            2,
+            [
+                MutableTxIn(
+                    '0'*32,
+                    0,
+                    ScriptSig.empty(),
+                    Sequence.max(),
+                    witness=Witness([])
+                )
+            ],
+            [
+                TxOut(
+                    10,
+                    0,
+                    P2pkScript(pubk)
+                )
+            ],
+            Locktime(0)
+        ).spend([TxOut(11, 0, p2sh)], [solver])
+
+        self.assertTrue(isinstance(tx, SegWitTransaction))
+        self.assertEqual(tx.locktime, Locktime(3000))
+        self.assertEqual(tx.ins[0].sequence, Sequence(10))
 
 
 if __name__ == '__main__':
