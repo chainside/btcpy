@@ -658,6 +658,8 @@ class MutableTransaction(Mutable, Transaction):
     def set_sequence(self, i, solver):
         if solver.solves_relative_locktime():
             self.ins[i].sequence = solver.get_relative_locktime()
+        elif solver.solves_absolute_locktime():
+            self.ins[i].sequence = Sequence(Sequence.MAX - 1)
 
     def spend_single(self, index, txout, solver):
 
