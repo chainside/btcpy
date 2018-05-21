@@ -129,7 +129,7 @@ class Embedder(metaclass=ABCMeta):
         return []
 
     def __init__(self, *args, scripts):
-        self.instance = self.get_script_cls()(*self.get_args(), *args, *scripts)
+        self.instance = self.get_script_cls()(*(self.get_args() + list(args) + scripts))
 
     def post(self):
         pass

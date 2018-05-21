@@ -23,7 +23,7 @@ def strictness(func):
     def wrapper(*args, strict=None, **kwargs):
         if strict is None:
             strict = is_strict()
-        return func(*args, **kwargs, strict=strict)
+        return func(*args, strict=strict, **kwargs)
     return wrapper
 
 

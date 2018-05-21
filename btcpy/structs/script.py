@@ -771,7 +771,7 @@ class MultisigScript(ScriptPubKey):
         if strict and valid < int(m):
             raise WrongPubKeyFormat('{} valid public keys while m is {}'.format(valid, int(m)))
 
-        return [int(m), *pubkeys, int(n)]
+        return [int(m)] + pubkeys + [int(n)]
 
     @strictness
     def __init__(self, *args, strict=None):
