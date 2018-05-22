@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+
 class Constants(object):
 
     _lookup = {'base58.prefixes': {'1': ('p2pkh', 'mainnet'),
@@ -16,7 +19,9 @@ class Constants(object):
                'xkeys.prefixes': {'mainnet': 'x', 'testnet': 't'},
                'xpub.version': {'mainnet': b'\x04\x88\xb2\x1e', 'testnet': b'\x04\x35\x87\xcf'},
                'xprv.version': {'mainnet': b'\x04\x88\xad\xe4', 'testnet': b'\x04\x35\x83\x94'},
-               'wif.prefixes': {'mainnet': 0x80, 'testnet': 0xef}}
+               'wif.prefixes': {'mainnet': 0x80, 'testnet': 0xef},
+               'decimals': Decimal('1e8')
+               }
 
     @staticmethod
     def get(key):
