@@ -184,7 +184,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
     def from_json(cls, dic):
-        return cls(int(Decimal(dic['value']) * Constants.get('decimals')),
+        return cls(int(Decimal(dic['value']) * Constants.get('to_unit')),
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
 
@@ -211,7 +211,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         pass
 
     def to_json(self):
-        return {'value': str(Decimal(self.value) * Constants.get('decimals')),
+        return {'value': str(Decimal(self.value) * Constants.get('from_unit')),
                 'n': self.n,
                 'scriptPubKey': self.script_pubkey.to_json()}
 

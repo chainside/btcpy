@@ -20,7 +20,8 @@ class Constants(object):
                'xpub.version': {'mainnet': b'\x04\x88\xb2\x1e', 'testnet': b'\x04\x35\x87\xcf'},
                'xprv.version': {'mainnet': b'\x04\x88\xad\xe4', 'testnet': b'\x04\x35\x83\x94'},
                'wif.prefixes': {'mainnet': 0x80, 'testnet': 0xef},
-               'decimals': Decimal('1e8')
+               'from_unit': Decimal('1e-8'),
+               'to_unit': Decimal('1e8')
                }
 
     @staticmethod
