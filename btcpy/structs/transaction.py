@@ -324,11 +324,8 @@ class Locktime(Immutable, HexSerializable):
     MAX = 2**32 - 1
 
     @classmethod
-    def from_datetime(cls, year, month, day, hour=0, minute=0, second=0):
-        """Beware: always assumes UTC times"""
-        from datetime import datetime, timezone
-        dt = datetime(year, month, day, hour=hour, minute=minute, second=second, tzinfo=timezone.utc)
-        timestamp = dt.timestamp()
+    def from_datetime(cls, dt):
+        timestamp = int(dt.timestamp())
         if timestamp < cls.blocks_threshold:
             raise ValueError('Date is too far in the past')
         return cls(timestamp)
