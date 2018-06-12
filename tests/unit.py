@@ -842,12 +842,15 @@ class TestLocktime(unittest.TestCase):
                 self.assertEqual(max([Locktime(x) for x in data['data']]), Locktime(data['outcome']))
 
     def test_dates(self):
+        from datetime import datetime, timezone
         for data in locktime_dates:
             if data['timestamp'] == 'error':
                 with self.assertRaises(ValueError):
-                    Locktime.from_datetime(**data['data'])
+                    Locktime.from_datetime(datetime(tzinfo=timezone.utc, **data['data']))
             else:
-                self.assertEqual(Locktime.from_datetime(**data['data']).n, data['timestamp'])
+                self.assertEqual(Locktime.from_datetime(datetime(tzinfo=timezone.utc,
+                                                                 **data['data'])).n,
+                                 data['timestamp'])
 
 
 class TestRelativeTimelock(unittest.TestCase):
