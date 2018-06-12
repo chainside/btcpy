@@ -143,7 +143,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
             data = self._serialize_key() + (index + cls.first_hardened_index).to_bytes(4, 'big')
         else:
             data = self._serialized_public() + index.to_bytes(4, 'big')
-        h = bytearray(hmac.new(self.chaincode, data, sha512).digest())
+        h = bytearray(hmac.new(bytes(self.chaincode), bytes(data), sha512).digest())
         left, right = int.from_bytes(h[:32], 'big'), h[32:]
         if left > cls.curve_order:
             raise ValueError('Left side of hmac generated number bigger than SECP256k1 curve order')
