@@ -12,6 +12,7 @@
 from binascii import hexlify, unhexlify
 from decimal import Decimal
 
+from ..constants import Constants
 from .sig import Sighash
 from .script import (ScriptBuilder, P2wpkhV0Script, P2wshV0Script, P2shScript, NulldataScript, ScriptSig,
                      CoinBaseScriptSig, ScriptPubKey)
@@ -183,7 +184,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
     def from_json(cls, dic):
-        return cls(int(Decimal(dic['value']) * Decimal('1e8')),
+        return cls(int(Decimal(dic['value']) * Constants.get('to_unit')),
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
 
@@ -210,7 +211,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         pass
 
     def to_json(self):
-        return {'value': str(Decimal(self.value) * Decimal('1e-8')),
+        return {'value': str(Decimal(self.value) * Constants.get('from_unit')),
                 'n': self.n,
                 'scriptPubKey': self.script_pubkey.to_json()}
 
