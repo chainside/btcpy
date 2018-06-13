@@ -20,10 +20,8 @@ from abc import ABCMeta, abstractmethod
 
 from ..lib.types import HexSerializable
 from ..lib.parsing import Stream, Parser
-from ..setup import is_mainnet
 from .crypto import PrivateKey, PublicKey
-from ..constants import Constants
-from ..setup import strictness
+from btcpy.setup import get_state
 
 
 class ExtendedKey(HexSerializable, metaclass=ABCMeta):
@@ -37,20 +35,10 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         return cls(key, chaincode, 0, cls.master_parent_fingerprint, 0, hardened=True)
 
     @classmethod
-    @strictness
-    def decode(cls, string, strict=None):
+    def decode(cls, string):
 
-        if string[0] == Constants.get('xkeys.prefixes')['mainnet']:
-            mainnet = True
-        elif string[0] == Constants.get('xkeys.prefixes')['testnet']:
-            mainnet = False
-        else:
+        if string[0] != get_state()['network'].xkeys_prefix:
             raise ValueError('Encoded key not recognised: {}'.format(string))
-
-        if strict and mainnet != is_mainnet():
-            raise ValueError('Trying to decode {}mainnet key '
-                             'in {}mainnet environment'.format('' if mainnet else 'non-',
-                                                               'non-' if mainnet else ''))
 
         decoded = b58decode_check(string)
         parser = Parser(bytearray(decoded))
@@ -86,7 +74,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def get_version(mainnet=None):
+    def get_version():
         raise NotImplemented
 
     def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
@@ -154,13 +142,13 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
                     self.parent_fingerprint == ExtendedKey.master_parent_fingerprint,
                     self.index == 0])
 
-    def encode(self, mainnet=None):
-        return b58encode_check(bytes(self.serialize(mainnet)))
+    def encode(self):
+        return b58encode_check(bytes(self.serialize()))
 
-    def serialize(self, mainnet=None):
+    def serialize(self):
         cls = self.__class__
         result = Stream()
-        result << cls.get_version(mainnet)
+        result << cls.get_version()
         result << self.depth.to_bytes(1, 'big')
         result << self.parent_fingerprint
         if self.hardened:
@@ -193,11 +181,8 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
 class ExtendedPrivateKey(ExtendedKey):
 
     @staticmethod
-    def get_version(mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
-        # using net_name here would ignore the mainnet=None flag
-        return Constants.get('xprv.version')['mainnet' if mainnet else 'testnet']
+    def get_version():
+        return get_state()['network'].xprv_version
 
     @staticmethod
     def decode_key(keydata):
@@ -244,11 +229,8 @@ class ExtendedPrivateKey(ExtendedKey):
 class ExtendedPublicKey(ExtendedKey):
 
     @staticmethod
-    def get_version(mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
-        # using net_name here would ignore the mainnet=None flag
-        return Constants.get('xpub.version')['mainnet' if mainnet else 'testnet']
+    def get_version():
+        return get_state()['network'].xpub_version
 
     @staticmethod
     def decode_key(keydata):

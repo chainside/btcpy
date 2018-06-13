@@ -11,10 +11,10 @@
 
 from functools import wraps
 
-networks = {'mainnet', 'testnet', 'regtest'}
+from btcpy.constants import BitcoinMainnet, BitcoinTestnet
 
-MAINNET = None
-NETNAME = None
+NETWORKS = (BitcoinMainnet, BitcoinTestnet)
+NETWORK = None
 STRICT = None
 
 
@@ -27,29 +27,27 @@ def strictness(func):
     return wrapper
 
 
-def setup(network='mainnet', strict=True, force=False):
-    global MAINNET, NETNAME, STRICT
+def setup(network=BitcoinMainnet, strict=True, force=False):
+    global NETWORK, STRICT
 
     prev_state = get_state()
 
-    if (MAINNET is not None and NETNAME != network) or (STRICT is not None and strict != is_strict()):
+    if (NETWORK is not None and NETWORK != network) or (STRICT is not None and strict != is_strict()):
         if not force:
             raise ValueError('Trying to change network type at runtime')
 
-    if network not in networks:
+    if network not in NETWORKS:
         raise ValueError('Unknown network type: {}'.format(network))
 
-    MAINNET = (network == 'mainnet')
-    NETNAME = network
+    NETWORK = network
     STRICT = strict
 
     return prev_state
 
 
 def get_state():
-    global MAINNET, NETNAME, STRICT
-    return {'netname': NETNAME,
-            'mainnet': MAINNET,
+    global NETWORK, STRICT
+    return {'network': NETWORK,
             'strict': STRICT}
 
 
@@ -58,17 +56,3 @@ def is_strict():
     if STRICT is None:
         ValueError('Strictness not set')
     return STRICT
-
-
-def is_mainnet():
-    global MAINNET
-    if MAINNET is None:
-        raise ValueError('Network type not set')
-    return MAINNET
-
-
-def net_name():
-    global NETNAME
-    if NETNAME is None:
-        raise ValueError('Network type not set')
-    return NETNAME

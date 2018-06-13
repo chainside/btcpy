@@ -10,17 +10,16 @@
 # LICENSE.md file.
 
 from binascii import unhexlify
-from ..lib.base58 import b58decode_check, b58encode_check
 from hashlib import sha256
 from ecdsa import SigningKey, SECP256k1
 from ecdsa.util import sigencode_der
 from functools import partial
 from abc import ABCMeta
 
-from ..lib.types import HexSerializable
-from .address import P2pkhAddress, P2wpkhAddress
-from ..setup import is_mainnet, net_name, strictness
-from ..constants import Constants
+from btcpy.lib.base58 import b58decode_check, b58encode_check
+from btcpy.lib.types import HexSerializable
+from btcpy.setup import get_state
+from btcpy.structs.address import P2pkhAddress, P2wpkhAddress
 
 
 class WrongPubKeyFormat(Exception):
@@ -36,8 +35,7 @@ class PrivateKey(Key):
     highest_s = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
     @staticmethod
-    @strictness
-    def from_wif(wif, strict=None):
+    def from_wif(wif):
 
         if not 51 <= len(wif) <= 52:
             raise ValueError('Invalid wif length: {}'.format(len(wif)))
@@ -45,12 +43,8 @@ class PrivateKey(Key):
         decoded = b58decode_check(wif)
         prefix, *rest = decoded
 
-        if prefix not in Constants.get('wif.prefixes').values():
+        if prefix != get_state()['network'].wif_prefix:
             raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
-
-        if strict:
-            if prefix != Constants.get('wif.prefixes')['mainnet' if is_mainnet() else 'testnet']:
-                raise ValueError('{0} prefix in non-{0} environment'.format(net_name()))
 
         public_compressed = len(rest) == 33
         privk = rest[0:32]
@@ -65,10 +59,8 @@ class PrivateKey(Key):
         self.key = priv
         self.public_compressed = public_compressed
 
-    def to_wif(self, mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
-        prefix = Constants.get('wif.prefixes')['mainnet' if mainnet else 'testnet']
+    def to_wif(self):
+        prefix = get_state()['network'].wif_prefix
         decoded = bytearray([prefix]) + self.key
         if self.public_compressed:
             decoded.append(0x01)
@@ -210,19 +202,15 @@ class PublicKey(BasePublicKey):
     def serialize(self):
         return self.uncompressed if self.type == 'uncompressed' else self.compressed
 
-    def to_address(self, mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
-        return P2pkhAddress(self.hash(), mainnet)
+    def to_address(self):
+        return P2pkhAddress(self.hash())
 
-    def to_segwit_address(self, version, mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
+    def to_segwit_address(self, version):
         if self.type == 'uncompressed':
             pubk = PublicKey(self.compressed)
         else:
             pubk = self
-        return P2wpkhAddress(pubk.hash(), version, mainnet)
+        return P2wpkhAddress(pubk.hash(), version)
 
     def __eq__(self, other):
         return (self.type, self.compressed, self.uncompressed) == (other.type, other.compressed, other.uncompressed)

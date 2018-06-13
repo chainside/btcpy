@@ -12,11 +12,8 @@
 from enum import Enum
 from abc import ABCMeta, abstractmethod
 
-from ..lib.types import Immutable, HexSerializable
-from .script import (Script, P2shScript, ScriptSig, P2pkhScript, P2wpkhV0Script, P2wshV0Script,
-                     P2pkScript, MultisigScript, TimelockScript, RelativeTimelockScript,
-                     IfElseScript, HashlockScript, StackData)
-from ..lib.parsing import Stream
+from btcpy.lib.types import Immutable, HexSerializable
+from btcpy.structs.script import ScriptSig, StackData
 
 
 class Branch(Enum):

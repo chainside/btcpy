@@ -496,8 +496,8 @@ class P2pkhScript(ScriptPubKey):
     def type(self):
         return 'p2pkh'
 
-    def address(self, mainnet=None):
-        return P2pkhAddress.from_script(self, mainnet)
+    def address(self):
+        return P2pkhAddress.from_script(self)
 
     def is_standard(self):
         return True
@@ -520,8 +520,8 @@ class P2wpkhScript(P2pkhScript, SegWitScript, metaclass=ABCMeta):
                 return cls
         raise ValueError('Undefined version: {}'.format(segwit_version))
 
-    def address(self, mainnet=None):
-        return P2wpkhAddress.from_script(self, mainnet)
+    def address(self):
+        return P2wpkhAddress.from_script(self)
 
 
 class P2wpkhV0Script(P2wpkhScript):
@@ -593,8 +593,8 @@ class P2shScript(ScriptPubKey):
     def is_standard(self):
         return True
 
-    def address(self, mainnet=None):
-        return P2shAddress.from_script(self, mainnet)
+    def address(self):
+        return P2shAddress.from_script(self)
 
 
 class P2wshScript(P2shScript, SegWitScript, metaclass=ABCMeta):
@@ -606,8 +606,8 @@ class P2wshScript(P2shScript, SegWitScript, metaclass=ABCMeta):
                 return cls
         raise ValueError('Undefined version: {}'.format(segwit_version))
 
-    def address(self, mainnet=None):
-        return P2wshAddress.from_script(self, mainnet)
+    def address(self):
+        return P2wshAddress.from_script(self)
 
 
 # noinspection PyUnresolvedReferences
