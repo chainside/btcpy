@@ -16,8 +16,7 @@ from unittest.mock import patch
 from btcpy.structs.transaction import *
 from btcpy.structs.script import *
 from btcpy.structs.block import *
-from btcpy.structs.crypto import PublicKey, PrivateKey
-from btcpy.structs.address import Address, SegWitAddress, P2shAddress, P2wshAddress
+from btcpy.structs.address import Address, SegWitAddress, P2shAddress, ClassicAddress
 from btcpy.lib.codecs import CouldNotDecode
 from btcpy.setup import setup
 from btcpy.structs.hd import *
@@ -266,7 +265,7 @@ class TestSegWitAddress(unittest.TestCase):
     def test_invalid(self):
         for address in segwit_invalid_addresses:
             with self.assertRaises(CouldNotDecode):
-                print(SegWitAddress.from_string(address, strict=False))
+                print(SegWitAddress.decode(address, strict=False))
 
 
 class TestSegwitOverP2sh(unittest.TestCase):
@@ -844,7 +843,7 @@ class TestAddress(unittest.TestCase):
     def test_fail(self):
         for address in self.bad_addresses:
             with self.assertRaises(ValueError):
-                Address.from_string(address, strict=False)
+                ClassicAddress.decode(address, strict=False)
 
     def test_conversions(self):
         for address, pkh in addresses:
@@ -853,6 +852,19 @@ class TestAddress(unittest.TestCase):
             self.assertEqual(P2pkhScript(Address.from_string(address, strict=False)).pubkeyhash,
                              bytearray(unhexlify(pkh)))
             self.assertEqual(P2pkhAddress(bytearray(unhexlify(pkh)), mainnet=True).hash, bytearray(unhexlify(pkh)))
+
+    def test_to_script(self):
+        data = {}
+        for addr, pkh in addresses:
+            data[addr] = P2pkhScript(bytearray(unhexlify(pkh)))
+        for script, addr in p2sh.items():
+            data[addr] = P2shScript(ScriptBuilder.identify(script))
+        for dic in segwit_valid_addresses:
+            data[dic['address']] = ScriptBuilder.identify(dic['script'])
+
+        for addr, script in data.items():
+            self.assertTrue(Address.from_string(addr, strict=False).to_script().hexlify(),
+                            script.hexlify())
 
 
 class TestStandardness(unittest.TestCase):
@@ -1157,9 +1169,6 @@ class TestStrictMode(unittest.TestCase):
 
         with self.assertRaises(WrongScriptTypeException):
             P2pkScript(StackData.unhexlify('00'*30))
-
-
-
 
 
 if __name__ == '__main__':
