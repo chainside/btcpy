@@ -36,6 +36,7 @@ def get_data(filename):
 
 
 transactions = get_data('rawtxs')
+json_txs = get_data('tx_json')
 scripts = get_data('scripts')
 unknownscripts = get_data('unknownscripts')
 keys = get_data('xkeys')
@@ -83,7 +84,7 @@ class TestSegwitHashes(unittest.TestCase):
 
     def test_hashes(self):
         for tx in segwit_hashes:
-            parsed = Transaction.unhexlify(tx['tx'])
+            parsed = TransactionFactory.unhexlify(tx['tx'])
             self.assertEqual(parsed.txid, tx['txid'])
             self.assertEqual(parsed.hash(), tx['hash'])
 
@@ -125,8 +126,8 @@ class TestNormalizedId(unittest.TestCase):
 
     def test(self):
         for tx1, tx2 in malleated_txs:
-            tx1 = Transaction.unhexlify(tx1)
-            tx2 = Transaction.unhexlify(tx2)
+            tx1 = TransactionFactory.unhexlify(tx1)
+            tx2 = TransactionFactory.unhexlify(tx2)
             self.assertNotEqual(tx1.txid, tx2.txid)
             self.assertEqual(tx1.normalized_id, tx2.normalized_id)
 
@@ -228,14 +229,23 @@ class TestTransaction(unittest.TestCase):
 
     def test_serialization(self):
         for data in transactions:
-            tx = Transaction.unhexlify(data['raw'])
+            tx = TransactionFactory.unhexlify(data['raw'])
             computed = tx.hexlify()
             original = data['raw']
             self.assertEqual(computed, original)
 
+    def test_jsonization(self):
+        for data in transactions:
+            tx = TransactionFactory.unhexlify(data['raw'])
+            self.assertEqual(TransactionFactory.from_json(tx.to_json()).to_json(), tx.to_json())
+
+        for tx in json_txs:
+            self.assertEqual(TransactionFactory.from_json(tx), TransactionFactory.unhexlify(tx['hex']))
+            self.assertEqual(TransactionFactory.unhexlify(tx['hex']).to_json(), tx)
+
     def test_txid(self):
         for data in transactions:
-            self.assertEqual(Transaction.unhexlify(data['raw']).txid, data['txid'])
+            self.assertEqual(TransactionFactory.unhexlify(data['raw']).txid, data['txid'])
 
     def test_script(self):
         for key, value in scripts.items():
@@ -293,7 +303,7 @@ class TestReplace(unittest.TestCase):
 
     def test_success(self):
         for transaction in transactions:
-            tx = MutableTransaction.unhexlify(transaction['raw'])
+            tx = TransactionFactory.unhexlify(transaction['raw'], mutable=True)
             self.assertEqual(tx.is_replaceable(), transaction['replaceable'])
             if len(tx.ins) > 2:
                 tx.ins[1].sequence = Sequence(0xfffffffd)
@@ -911,16 +921,16 @@ class TestStandardness(unittest.TestCase):
 
     def test_txin_success(self):
         # coinbase txin
-        txin = Transaction.unhexlify('01000000010000000000000000000000000000000000000000000000000000000000000000'
-                                     'ffffffff3d039920071c2f706f6f6c2e626974636f696e2e636f6d2f4249503130302f4238'
-                                     '2f0a092f4542312f4144362f109c52640027ed852ba74c0741c3eb0100ffffffff01505266'
-                                     '53000000001976a9143fa71ed2e38d431960f314e7e7aad476a5496b4c88ac00000000').ins[0]
+        txin = TransactionFactory.unhexlify('01000000010000000000000000000000000000000000000000000000000000000000000000'
+                                            'ffffffff3d039920071c2f706f6f6c2e626974636f696e2e636f6d2f4249503130302f4238'
+                                            '2f0a092f4542312f4144362f109c52640027ed852ba74c0741c3eb0100ffffffff01505266'
+                                            '53000000001976a9143fa71ed2e38d431960f314e7e7aad476a5496b4c88ac00000000').ins[0]
         self.assertTrue(txin.is_standard())
-        txin = Transaction.unhexlify('0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce6050000000'
-                                     '06b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02'
-                                     '207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e85755'
-                                     '36a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b00000000'
-                                     '1976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000').ins[0]
+        txin = TransactionFactory.unhexlify('0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce6050000000'
+                                            '06b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02'
+                                            '207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e85755'
+                                            '36a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b00000000'
+                                            '1976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000').ins[0]
         self.assertTrue(txin.is_standard())
 
         # actual redeem script (15 sigops: 14 OP_CHECKMULTISIGVERIFY + OP_CHECKSIG)
@@ -997,22 +1007,26 @@ class TestSegwitSigs(unittest.TestCase):
 
     def test_hash_prevouts(self):
         for tx in self.data:
-            unsigned = SegWitTransaction.unhexlify(tx['unsigned_tx'])
+            unsigned = Transaction.unhexlify(tx['unsigned_tx'])
+            unsigned = SegWitTransaction(unsigned.version, unsigned.ins, unsigned.outs, unsigned.locktime)
             self.assertEqual(unsigned._hash_prevouts(), bytearray(unhexlify(tx['hash_prevouts'])))
 
     def test_hash_sequence(self):
         for tx in self.data:
-            unsigned = SegWitTransaction.unhexlify(tx['unsigned_tx'])
+            unsigned = Transaction.unhexlify(tx['unsigned_tx'])
+            unsigned = SegWitTransaction(unsigned.version, unsigned.ins, unsigned.outs, unsigned.locktime)
             self.assertEqual(unsigned._hash_sequence(), bytearray(unhexlify(tx['hash_sequence'])))
 
     def test_hash_outputs(self):
         for tx in self.data:
-            unsigned = SegWitTransaction.unhexlify(tx['unsigned_tx'])
+            unsigned = Transaction.unhexlify(tx['unsigned_tx'])
+            unsigned = SegWitTransaction(unsigned.version, unsigned.ins, unsigned.outs, unsigned.locktime)
             self.assertEqual(unsigned._hash_outputs(), bytearray(unhexlify(tx['hash_outputs'])))
 
     def test_digest_preimage(self):
         for tx in self.data:
-            unsigned = SegWitTransaction.unhexlify(tx['unsigned_tx'])
+            unsigned = Transaction.unhexlify(tx['unsigned_tx'])
+            unsigned = SegWitTransaction(unsigned.version, unsigned.ins, unsigned.outs, unsigned.locktime)
             for j, txin in enumerate(tx['txins']):
                 if 'digest_preimage' in txin:
                     self.assertEqual(unsigned._get_segwit_digest_preimage(j,
@@ -1022,7 +1036,8 @@ class TestSegwitSigs(unittest.TestCase):
 
     def test_digest(self):
         for tx in self.data:
-            unsigned = SegWitTransaction.unhexlify(tx['unsigned_tx'])
+            unsigned = Transaction.unhexlify(tx['unsigned_tx'])
+            unsigned = SegWitTransaction(unsigned.version, unsigned.ins, unsigned.outs, unsigned.locktime)
             for j, txin in enumerate(tx['txins']):
                 if 'digest' in txin:
                     self.assertEqual(hexlify(unsigned.get_segwit_digest(j,

@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 
 from .regtest import Manager
 from btcpy.structs.hd import ExtendedPrivateKey, ExtendedPublicKey
-from btcpy.structs.transaction import Transaction, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
+from btcpy.structs.transaction import TransactionFactory, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
 from btcpy.structs.sig import *
 from btcpy.structs.script import *
 from btcpy.setup import setup
@@ -448,7 +448,7 @@ class TestSpends(unittest.TestCase):
         for i in range(3):
             # create 3 tx to add to UTXO
             txid = regtest.send_rpc_cmd(['sendtoaddress', addr_string, '100'], 0)
-            to_spend = Transaction.unhexlify(regtest.send_rpc_cmd(['getrawtransaction', txid, '0'], 0))
+            to_spend = TransactionFactory.unhexlify(regtest.send_rpc_cmd(['getrawtransaction', txid, '0'], 0))
             txout = None
             for out in to_spend.outs:
                 if str(out.script_pubkey.address()) == addr_string:
