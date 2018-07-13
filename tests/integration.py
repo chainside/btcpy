@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 
 from .regtest import Manager
 from btcpy.structs.hd import ExtendedPrivateKey, ExtendedPublicKey
-from btcpy.structs.transaction import Transaction, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
+from btcpy.structs.transaction import TransactionFactory, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
 from btcpy.structs.sig import *
 from btcpy.structs.script import *
 from btcpy.setup import setup
@@ -214,6 +214,32 @@ class Hashlock256Embedder(Embedder):
     @staticmethod
     def get_script_cls():
         return Hashlock256Script
+
+
+def get_type(solver):
+
+    if isinstance(solver, P2pkSolver):
+        return 'p2pk'
+    elif isinstance(solver, P2pkhSolver):
+        return 'p2pkh'
+    elif isinstance(solver, MultisigSolver):
+        return 'multisig'
+    elif isinstance(solver, P2wpkhV0Solver):
+        return 'p2wpkh'
+    else:
+        if isinstance(solver, TimelockSolver):
+            return 'timelock [ {} ]'.format(get_type(solver.inner_solver))
+        elif isinstance(solver, IfElseSolver):
+            if solver.branch == Branch.IF:
+                return 'if [ {} ]'.format(get_type(solver.inner_solver))
+            else:
+                return 'else [ {} ]'.format(get_type(solver.inner_solver))
+        elif isinstance(solver, HashlockSolver):
+            return 'hashlock [ {} ]'.format(get_type(solver.inner_solver))
+        elif isinstance(solver, P2shSolver):
+            return 'p2sh [ {} ]'.format(get_type(solver.redeem_script_solver))
+        elif isinstance(solver, P2wshV0Solver):
+            return 'p2wsh [ {} ]'.format(get_type(solver.witness_script_solver))
 
 
 class TestSpends(unittest.TestCase):
@@ -429,7 +455,7 @@ class TestSpends(unittest.TestCase):
         for i in range(3):
             # create 3 tx to add to UTXO
             txid = regtest.send_rpc_cmd(['sendtoaddress', addr_string, '100'], 0)
-            to_spend = Transaction.unhexlify(regtest.send_rpc_cmd(['getrawtransaction', txid, '0'], 0))
+            to_spend = TransactionFactory.unhexlify(regtest.send_rpc_cmd(['getrawtransaction', txid, '0'], 0))
             txout = None
             for out in to_spend.outs:
                 if str(out.script_pubkey.address()) == addr_string:
@@ -449,7 +475,7 @@ class TestSpends(unittest.TestCase):
 
         i = 0
         while i < len(self.all) - 2:
-            print('{:04d}\r'.format(i), end='', flush=True)
+            # print('{:04d}\r'.format(i), end='', flush=True)
             ins = [MutableTxIn(unspent['txid'], unspent['txout'].n, ScriptSig.empty(), unspent['next_seq']) for unspent in utxo]
             outs = []
             prev_types = []
@@ -457,10 +483,13 @@ class TestSpends(unittest.TestCase):
             for j, (unspent, script) in enumerate(zip(utxo, self.all[i:i+3])):
                 outs.append(TxOut(unspent['txout'].value - 1000000, j, script[0]))
                 prev_types.append(script[2])
+                print('Spending `{}`, sighashes: '.format(get_type(unspent['solver']),
+                                                          ', '.join([str(sh) for sh in unspent['solver'].get_sighashes()])))
 
             tx = MutableTransaction(2, ins, outs, Locktime(0))
             mutable = copy.deepcopy(tx)
             tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
+            # print(json.dumps({'signed': tx.to_json()}))
 
             # print('====================')
             # print('txid: {}'.format(tx.txid))
@@ -470,8 +499,8 @@ class TestSpends(unittest.TestCase):
             # print('raw: {}'.format(tx.hexlify()))
             # print('prev_scripts, amounts, solvers:')
             # print('TX: {}'.format(i))
-
             regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
+
             # print('Mempool size: {}'.format(len(regtest.send_rpc_cmd(['getrawmempool'], 0))))
 
             if cmdline_args.dumpfile is not None:
@@ -511,6 +540,7 @@ class TestSpends(unittest.TestCase):
                                 ins,
                                 [TxOut(sum(unspent['txout'].value for unspent in utxo) - 1000000, 0, self.final['script'])],
                                 min_locktime(unspent['next_locktime'] for unspent in utxo))
+
         tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
 
         # print('====================')

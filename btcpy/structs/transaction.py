@@ -9,9 +9,11 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE.md file.
 
+from abc import ABCMeta
 from binascii import hexlify, unhexlify
 from decimal import Decimal
 
+from ..constants import Constants
 from .sig import Sighash
 from .script import (ScriptBuilder, P2wpkhV0Script, P2wshV0Script, P2shScript, NulldataScript, ScriptSig,
                      CoinBaseScriptSig, ScriptPubKey)
@@ -153,13 +155,19 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
     def from_json(cls, dic):
+
+        try:
+            witness = Witness.from_json(dic['txinwitness'])
+        except KeyError:
+            witness = None
+
         if 'coinbase' in dic:
             return CoinBaseTxIn(CoinBaseScriptSig(bytearray(unhexlify(dic['coinbase']['hex']))),
-                                Sequence(int(dic['sequence'])))
+                                Sequence(int(dic['sequence'])), witness=witness)
         return cls(dic['txid'],
                    dic['vout'],
                    ScriptSig(bytearray(unhexlify(dic['scriptSig']['hex']))),
-                   Sequence(int(dic['sequence'])))
+                   Sequence(int(dic['sequence'])), witness=witness)
 
     def __init__(self, txid: str, txout: int, script_sig: ScriptSig, sequence: Sequence, witness=None):
         object.__setattr__(self, 'txid', txid)
@@ -255,7 +263,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
     def from_json(cls, dic):
-        return cls(int(Decimal(dic['value']) * Decimal('1e8')),
+        return cls(int(Decimal(dic['value']) * Constants.get('to_unit')),
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
 
@@ -282,7 +290,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         pass
 
     def to_json(self):
-        return {'value': str(Decimal(self.value) * Decimal('1e-8')),
+        return {'value': str(Decimal(self.value) * Constants.get('from_unit')),
                 'n': self.n,
                 'scriptPubKey': self.script_pubkey.to_json()}
 
@@ -388,8 +396,9 @@ class Witness(Immutable, HexSerializable, Jsonizable):
     max_single_push_size = 80
 
     @classmethod
-    def from_json(cls, string):
-        pass
+    def from_json(cls, witness_json):
+        from .script import StackData
+        return cls([StackData.unhexlify(elem) for elem in witness_json])
 
     def __init__(self, stack_items):
         object.__setattr__(self, 'items', stack_items)
@@ -432,11 +441,16 @@ class Witness(Immutable, HexSerializable, Jsonizable):
         return 'Witness([{}])'.format(', '.join('"{}"'.format(item) for item in self.items))
 
 
-# noinspection PyUnresolvedReferences
-class Transaction(Immutable, HexSerializable, Jsonizable):
+class BaseTransaction(HexSerializable, Jsonizable, metaclass=ABCMeta):
 
-    max_version = 2
-    max_weight = 400000
+    @classmethod
+    def from_json(cls, tx_json):
+        tx = cls(version=tx_json['version'],
+                 locktime=Locktime(tx_json['locktime']),
+                 txid=tx_json['txid'],
+                 ins=[TxIn.from_json(txin_json) for txin_json in tx_json['vin']],
+                 outs=[TxOut.from_json(txout_json) for txout_json in tx_json['vout']])
+        return tx
 
     @classmethod
     def unhexlify(cls, string):
@@ -445,20 +459,25 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
     @classmethod
     def deserialize(cls, string):
         parser = TransactionParser(string)
-        result = parser.get_next_tx(cls is MutableTransaction)
+        result = parser.get_next_tx(issubclass(cls, Mutable))
         if parser:
             raise ValueError('Leftover data after transaction')
+        if not isinstance(result, cls):
+            raise TypeError('Trying to load transaction from wrong transaction serialization')
         return result
+
+
+# noinspection PyUnresolvedReferences
+class Transaction(BaseTransaction, Immutable):
+
+    max_version = 2
+    max_weight = 400000
 
     @classmethod
     def from_json(cls, tx_json):
-
-        tx = cls(version=tx_json['version'],
-                 locktime=Locktime(tx_json['locktime']),
-                 txid=tx_json['txid'],
-                 ins=[TxIn.from_json(txin_json) for txin_json in tx_json['vin']],
-                 outs=[TxOut.from_json(txout_json) for txout_json in tx_json['vout']])
-
+        tx = super().from_json(tx_json)
+        if any(txin.witness is not None for txin in tx.ins):
+            raise TypeError('Trying to load classic transaction from SegWit transaction json')
         return tx
 
     def __init__(self, version, ins, outs, locktime, txid=None):
@@ -699,22 +718,24 @@ class MutableTransaction(Mutable, Transaction):
         return self.to_immutable()
 
 
-class SegWitTransaction(Immutable, HexSerializable, Jsonizable):
+class SegWitTransaction(BaseTransaction, Immutable):
 
     marker = 0x00
     flag = 0x01
     byte_marker = bytearray([marker])
     byte_flag = bytearray([flag])
 
-    @staticmethod
-    def unhexlify(string):
-        tx = Transaction.unhexlify(string)
-        return SegWitTransaction(tx.version, tx.ins, tx.outs, tx.locktime)
+    # @classmethod
+    # def unhexlify(cls, string):
+    #     tx = Transaction.unhexlify(string)
+    #     return SegWitTransaction(tx.version, tx.ins, tx.outs, tx.locktime)
 
-    @staticmethod
-    def from_json(string):
-        tx = Transaction.from_json(string)
-        return SegWitTransaction(tx.version, tx.ins, tx.outs, tx.locktime)
+    @classmethod
+    def from_json(cls, tx_json):
+        tx = super().from_json(tx_json)
+        if any(txin.witness is None for txin in tx.ins):
+            raise TypeError('Trying to load segwit transaction from non-segwit transaction json')
+        return tx
 
     def __init__(self, version, ins, outs, locktime, txid=None):
         object.__setattr__(self, 'transaction', Transaction(version, ins, outs, locktime, txid))
@@ -950,3 +971,35 @@ class MutableSegWitTransaction(Mutable, SegWitTransaction):
 
         return self.to_immutable()
 
+
+class TransactionFactory(object):
+
+    @classmethod
+    def _get_class(cls, segwit, mutable):
+        classes = {(True, True): MutableSegWitTransaction,
+                   (True, False): SegWitTransaction,
+                   (False, True): MutableTransaction,
+                   (False, False): Transaction}
+        return classes[(segwit, mutable)]
+
+    @classmethod
+    def deserialize(cls, string, mutable=False):
+        try:
+            return cls._get_class(segwit=False, mutable=mutable).deserialize(string)
+        except TypeError:
+            return cls._get_class(segwit=True, mutable=mutable).deserialize(string)
+
+    @classmethod
+    def unhexlify(cls, string, mutable=False):
+        try:
+            return cls._get_class(segwit=False, mutable=mutable).unhexlify(string)
+        except TypeError:
+            return cls._get_class(segwit=True, mutable=mutable).unhexlify(string)
+
+    @classmethod
+    def from_json(cls, tx_json, mutable=False):
+        segwit = all('txinwitness' in txin for txin in tx_json['vin'])
+        if segwit:
+            return cls._get_class(segwit=True, mutable=mutable).from_json(tx_json)
+        else:
+            return cls._get_class(segwit=False, mutable=mutable).from_json(tx_json)
