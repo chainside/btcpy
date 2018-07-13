@@ -773,7 +773,7 @@ class TestTimelock(unittest.TestCase):
                                                                         "ad09a89e211aeb926242")))
 
     def test_success(self):
-        script = TimelockScript(Locktime(self.locktime), self.locked_script)
+        script = AbsoluteTimelockScript(Locktime(self.locktime), self.locked_script)
         self.assertTrue(script.decompile() ==
                         '{} OP_CHECKLOCKTIMEVERIFY OP_DROP {}'.format(Locktime(self.locktime).for_script(),
                                                                       self.locked_script.decompile()))
@@ -782,7 +782,7 @@ class TestTimelock(unittest.TestCase):
 
     def test_matching_fail_wrong_op(self):
         with self.assertRaises(WrongScriptTypeException):
-            TimelockScript.unhexlify('{}b1aa{}'.format(Locktime(self.locktime).for_script().hexlify(),
+            AbsoluteTimelockScript.unhexlify('{}b1aa{}'.format(Locktime(self.locktime).for_script().hexlify(),
                                                        self.locked_script.hexlify()))
 
 
@@ -1278,7 +1278,7 @@ class TestSolvers(unittest.TestCase):
         pubk = PublicKey.unhexlify('021c703de670b3b0df446e948f76acecd6e539a6a395b408bbcd711e2744b74a7b')
         privk = PrivateKey.unhexlify('e2cf56175f5cd5f19e9d1599b99463d769c6e16f1753dfa18aab64cbabeb7b7d')
         script = IfElseScript(
-            TimelockScript(
+            AbsoluteTimelockScript(
                 Locktime(2000),
                 RelativeTimelockScript(
                     Sequence(5),
@@ -1314,7 +1314,7 @@ class TestSolvers(unittest.TestCase):
         hash160 = preimage.hash160()
         hash256 = preimage.hash256()
         script = IfElseScript(
-            TimelockScript(
+            AbsoluteTimelockScript(
                 Locktime(2000),
                 Hashlock160Script(
                     hash160,
@@ -1322,7 +1322,7 @@ class TestSolvers(unittest.TestCase):
                         Sequence(5),
                         Hashlock256Script(
                             hash256,
-                            TimelockScript(
+                            AbsoluteTimelockScript(
                                 Locktime(3000),
                                 RelativeTimelockScript(
                                     Sequence(10),

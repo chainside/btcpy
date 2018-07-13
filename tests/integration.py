@@ -172,7 +172,7 @@ class TimelockEmbedder(Embedder):
 
     @staticmethod
     def get_script_cls():
-        return TimelockScript
+        return AbsoluteTimelockScript
 
     @staticmethod
     def get_args():

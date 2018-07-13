@@ -922,7 +922,7 @@ class IfElseScript(ScriptPubKey):
 
 
 # noinspection PyUnresolvedReferences
-class TimelockScript(ScriptPubKey):
+class AbsoluteTimelockScript(ScriptPubKey):
 
     @staticmethod
     def verify(bytes_):
@@ -969,10 +969,10 @@ class TimelockScript(ScriptPubKey):
             super().__init__(script_body.serialize())
 
         else:
-            raise TypeError('Wrong number of params for TimelockScript __init__: {}'.format(len(args)))
+            raise TypeError('Wrong number of params for AbsoluteTimelockScript __init__: {}'.format(len(args)))
 
     def __repr__(self):
-        return 'TimelockScript({}, {})'.format(self.locktime, self.locked_script)
+        return 'AbsoluteTimelockScript({}, {})'.format(self.locktime, self.locked_script)
 
     @property
     def type(self):
@@ -1152,7 +1152,7 @@ class ScriptBuilder(object):
              MultisigScript,
              IfElseScript,
              RelativeTimelockScript,
-             TimelockScript,
+             AbsoluteTimelockScript,
              Hashlock256Script,
              Hashlock160Script,
              P2wpkhV0Script,

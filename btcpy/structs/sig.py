@@ -14,7 +14,7 @@ from abc import ABCMeta, abstractmethod
 
 from ..lib.types import Immutable, HexSerializable
 from .script import (Script, P2shScript, ScriptSig, P2pkhScript, P2wpkhV0Script, P2wshV0Script,
-                     P2pkScript, MultisigScript, TimelockScript, RelativeTimelockScript,
+                     P2pkScript, MultisigScript, AbsoluteTimelockScript, RelativeTimelockScript,
                      IfElseScript, HashlockScript, StackData)
 from ..lib.parsing import Stream
 
