@@ -483,8 +483,8 @@ class TestSpends(unittest.TestCase):
             for j, (unspent, script) in enumerate(zip(utxo, self.all[i:i+3])):
                 outs.append(TxOut(unspent['txout'].value - 1000000, j, script[0]))
                 prev_types.append(script[2])
-                print('Spending `{}`, sighashes: '.format(get_type(unspent['solver']),
-                                                          ', '.join([str(sh) for sh in unspent['solver'].get_sighashes()])))
+                print('Spending `{}`, sighashes: {}'.format(get_type(unspent['solver']),
+                                                            ', '.join([str(sh) for sh in unspent['solver'].get_sighashes()])))
 
             tx = MutableTransaction(2, ins, outs, Locktime(0))
             mutable = copy.deepcopy(tx)
