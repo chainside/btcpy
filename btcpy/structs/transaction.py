@@ -12,7 +12,7 @@
 from binascii import hexlify, unhexlify
 from decimal import Decimal
 
-from .sig import Sighash, AbsoluteTimelockSolver, RelativeTimeLockSolver
+from .sig import Sighash
 from .script import (ScriptBuilder, P2wpkhV0Script, P2wshV0Script, P2shScript, NulldataScript, ScriptSig,
                      CoinBaseScriptSig, ScriptPubKey)
 from ..lib.types import Immutable, Mutable, Jsonizable, HexSerializable, cached
@@ -610,9 +610,6 @@ class Transaction(Immutable, HexSerializable, Jsonizable):
         to_hash << throwaway
         to_hash << sighash
 
-        # print('SIGHASH: {}'.format(spend.sighash))
-        # print(self)
-
         return to_hash
 
     def get_digest(self, txin, prev_script, sighash=Sighash('ALL')):
@@ -694,8 +691,10 @@ class MutableTransaction(Mutable, Transaction):
             self.locktime = max(locktimes)
 
         for i, (txout, solver) in enumerate(zip(txouts, solvers)):
-            self.spend_single(i, txout, solver)
             self.set_sequence(i, solver)
+
+        for i, (txout, solver) in enumerate(zip(txouts, solvers)):
+            self.spend_single(i, txout, solver)
 
         return self.to_immutable()
 
@@ -944,8 +943,10 @@ class MutableSegWitTransaction(Mutable, SegWitTransaction):
             self.locktime = max(locktimes)
 
         for i, (txout, solver) in enumerate(zip(txouts, solvers)):
-            self.spend_single(i, txout, solver)
             self.set_sequence(i, solver)
+
+        for i, (txout, solver) in enumerate(zip(txouts, solvers)):
+            self.spend_single(i, txout, solver)
 
         return self.to_immutable()
 

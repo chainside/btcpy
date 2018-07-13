@@ -1269,7 +1269,7 @@ class TestSolvers(unittest.TestCase):
                     Branch.IF,
                     AbsoluteTimelockSolver(
                         Locktime(2000),
-                        RelativeTimeLockSolver(
+                        RelativeTimelockSolver(
                             Sequence(5),
                             P2pkSolver(privk)
                         )
@@ -1319,13 +1319,13 @@ class TestSolvers(unittest.TestCase):
                         Locktime(2000),
                         HashlockSolver(
                             preimage.serialize(),
-                            RelativeTimeLockSolver(
+                            RelativeTimelockSolver(
                                 Sequence(5),
                                 HashlockSolver(
                                     preimage.serialize(),
                                     AbsoluteTimelockSolver(
                                         Locktime(3000),
-                                        RelativeTimeLockSolver(
+                                        RelativeTimelockSolver(
                                             Sequence(10),
                                             P2pkSolver(privk)
                                         )

@@ -147,6 +147,9 @@ class P2shSolver(Solver):
     def solves_segwit(self):
         return self.redeem_script_solver.solves_segwit()
 
+    def has_prev_script(self):
+        return True
+
     def get_prev_script(self):
         if self.redeem_script_solver.has_prev_script():
             return self.redeem_script_solver.get_prev_script()
@@ -164,9 +167,6 @@ class P2shSolver(Solver):
 
     def get_relative_locktime(self):
         return self.redeem_script_solver.get_relative_locktime()
-
-    def has_prev_script(self):
-        return True
 
 
 class P2wshV0Solver(SegWitSolver):
@@ -305,7 +305,7 @@ class AbsoluteTimelockSolver(TimelockSolver):
         return self.locktime
 
 
-class RelativeTimeLockSolver(TimelockSolver):
+class RelativeTimelockSolver(TimelockSolver):
 
     def __init__(self, sequence, inner_solver):
         super().__init__(inner_solver)
