@@ -20,7 +20,7 @@ if sys.version_info.minor < 4:
     requirements.append('enum34')
 
 setup(name='chainside-btcpy',
-      version='0.5.1',
+      version='0.6',
       packages=find_packages(),
       install_requires=requirements,
       extras_require={'develop': ['python-bitcoinlib==0.7.0']},
@@ -28,6 +28,6 @@ setup(name='chainside-btcpy',
       author='chainside srl',
       author_email='simone.bronzini@chainside.net',
       url='https://github.com/chainside/btcpy',
-      download_url='https://github.com/chainside/btcpy/archive/0.5.1.tar.gz',
+      download_url='https://github.com/chainside/btcpy/archive/0.6.tar.gz',
       python_requires='>=3',
       keywords=['bitcoin', 'blockchain', 'bitcoind', 'chainside'])
