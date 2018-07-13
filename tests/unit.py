@@ -267,6 +267,15 @@ class TestTransaction(unittest.TestCase):
             self.assertEqual(str(parsed_script), value['asm'])
             self.assertEqual(parsed_script.type, value['type'])
 
+    # Fails on the last transaction for some reason :\
+    def test_json(self):
+        "Check that we can convert to json and back again."
+        for data in transactions:
+            tx = Transaction.unhexlify(data["raw"])
+            tx_json = tx.to_json()
+            tx_from_json = Transaction.from_json(tx_json)
+            self.assertEqual(tx, tx_from_json)
+
 
 class TestSegWitAddress(unittest.TestCase):
 
