@@ -1,2 +1,3 @@
 ecdsa==0.13 --hash=sha256:40d002cf360d0e035cf2cb985e1308d41aaa087cbfc135b2dc2d844296ea546c
 python-bitcoinlib==0.7.0 --hash=sha256:a083f61b30c7d748f8c785591fbdc26dbad98b64946cd1fbbf25c860b8ff7c3c
+enum34==1.1.6; python_version < '3.4'

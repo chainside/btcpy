@@ -337,11 +337,18 @@ class TestSpends(unittest.TestCase):
                                                  (HashlockSolver(preimage, script['solver']),
                                                   emb.instance),
                                                  '{}({})'.format(embedder.get_name(), script['name'])))
-                        else:
+                        elif embedder.get_name() == 'relativetime':
                             emb = embedder(scripts=[script['script']])
                             embedded.append((emb.instance,
-                                             (TimelockSolver(script['solver']), emb.instance),
+                                             (RelativeTimelockSolver(Sequence(3), script['solver']), emb.instance),
                                              '{}({})'.format(embedder.get_name(), script['name'])))
+                        elif embedder.get_name() == 'absolutetime':
+                            emb = embedder(scripts=[script['script']])
+                            embedded.append((emb.instance,
+                                             (AbsoluteTimelockSolver(Locktime(100), script['solver']), emb.instance),
+                                             '{}({})'.format(embedder.get_name(), script['name'])))
+                        else:
+                            raise ValueError('Unknown embedder: {}'.format(embedder.get_name()))
 
         self.all += [s for s in embedded]
 
@@ -465,8 +472,6 @@ class TestSpends(unittest.TestCase):
         regtest.send_rpc_cmd(['generate', '100'], 0)
 
         generate = False
-        next_locktime = Locktime(0)
-        next_sequence = Sequence.max()
 
         i = 0
         while i < len(self.all) - 2:
@@ -478,14 +483,12 @@ class TestSpends(unittest.TestCase):
             for j, (unspent, script) in enumerate(zip(utxo, self.all[i:i+3])):
                 outs.append(TxOut(unspent['txout'].value - 1000000, j, script[0]))
                 prev_types.append(script[2])
+                print('Spending `{}`, sighashes: '.format(get_type(unspent['solver']),
+                                                          ', '.join([str(sh) for sh in unspent['solver'].get_sighashes()])))
 
-            tx = MutableTransaction(2, ins, outs, min_locktime(unspent['next_locktime'] for unspent in utxo))
-            # print(json.dumps({'prevouts': [out.to_json() for out in outs]}))
-            # print(json.dumps({'unsigned': tx.to_json()}))
+            tx = MutableTransaction(2, ins, outs, Locktime(0))
             mutable = copy.deepcopy(tx)
             tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
-            for unspent in utxo:
-                print('Spending `{}`'.format(get_type(unspent['solver'])))
             # print(json.dumps({'signed': tx.to_json()}))
 
             # print('====================')
@@ -495,9 +498,9 @@ class TestSpends(unittest.TestCase):
             # print()
             # print('raw: {}'.format(tx.hexlify()))
             # print('prev_scripts, amounts, solvers:')
-
             # print('TX: {}'.format(i))
             regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
+
             # print('Mempool size: {}'.format(len(regtest.send_rpc_cmd(['getrawmempool'], 0))))
 
             if cmdline_args.dumpfile is not None:
@@ -510,22 +513,14 @@ class TestSpends(unittest.TestCase):
 
             for j, (output, prev_type) in enumerate(zip(tx.outs, prev_types)):
 
-                if 'time' in prev_type:
-                    if 'absolute' in prev_type:
-                        next_locktime = Locktime(100)
-                        next_sequence = Sequence(0xfffffffe)
-                    if 'relative' in prev_type:
-                        next_sequence = Sequence(3)
-                        generate = True
-                else:
-                    next_locktime = Locktime(0)
-                    next_sequence = Sequence.max()
+                if 'relativetime' in prev_type:
+                    generate = True
 
                 utxo.append({'txid': tx.txid,
                              'txout': output,
                              'solver': self.all[i+j][1][0],  # solver
-                             'next_seq': next_sequence,
-                             'next_locktime': next_locktime})
+                             'next_seq': Sequence.max(),
+                             'next_locktime': Locktime(0)})
             if generate:
                 regtest.send_rpc_cmd(['generate', '4'], 0)
                 generate = False
