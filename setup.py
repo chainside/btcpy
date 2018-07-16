@@ -14,13 +14,15 @@ import sys
 from distutils.core import setup
 from setuptools import find_packages
 
+BTCPYVERSION = '0.6.1'
+
 requirements = ['ecdsa==0.13']
 
 if sys.version_info.minor < 4:
     requirements.append('enum34')
 
 setup(name='chainside-btcpy',
-      version='0.6',
+      version=BTCPYVERSION,
       packages=find_packages(),
       install_requires=requirements,
       extras_require={'develop': ['python-bitcoinlib==0.7.0']},
@@ -28,6 +30,6 @@ setup(name='chainside-btcpy',
       author='chainside srl',
       author_email='simone.bronzini@chainside.net',
       url='https://github.com/chainside/btcpy',
-      download_url='https://github.com/chainside/btcpy/archive/0.6.tar.gz',
+      download_url='https://github.com/chainside/btcpy/archive/{}.tar.gz'.format(BTCPYVERSION),
       python_requires='>=3',
       keywords=['bitcoin', 'blockchain', 'bitcoind', 'chainside'])
