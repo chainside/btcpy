@@ -28,7 +28,7 @@ class Address(metaclass=ABCMeta):
     @strictness
     def is_valid(cls, string, strict=None):
         try:
-            cls.from_string(string, strict)
+            cls.from_string(string, strict=strict)
         except InvalidAddress:
             return False
         return True
