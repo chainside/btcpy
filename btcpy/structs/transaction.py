@@ -211,7 +211,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         pass
 
     def to_json(self):
-        return {'value': Decimal(self.value) * Constants.get('from_unit'),
+        return {'value': float(Decimal(self.value) * Constants.get('from_unit')),
                 'n': self.n,
                 'scriptPubKey': self.script_pubkey.to_json()}
 
