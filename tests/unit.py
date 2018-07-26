@@ -962,6 +962,15 @@ class TestAddress(unittest.TestCase):
             self.assertTrue(Address.from_string(addr, strict=False).to_script().hexlify(),
                             script.hexlify())
 
+    def test_from_script_fail(self):
+        pk = PublicKey.unhexlify("02c08786d63f78bd0a6777ffe9c978cf5899756cfc32bfad09a89e211aeb926242")
+        with self.assertRaises(ValueError):
+            P2wshAddress.from_script(P2wpkhV0Script(pk))
+        with self.assertRaises(ValueError):
+            P2wshAddress.from_script(P2shScript(P2pkhScript(pk)))
+        with self.assertRaises(ValueError):
+            P2wshAddress.from_script(P2wshV0Script(P2pkhScript(pk)), version=1)
+
 
 class TestStandardness(unittest.TestCase):
 

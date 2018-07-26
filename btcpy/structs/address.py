@@ -192,13 +192,20 @@ class P2wshAddress(SegWitAddress):
         return 'p2wsh'
 
     @classmethod
-    def from_script(cls, script, mainnet=None):
-        from .script import P2wshScript
-        version = script.__class__.get_version()
+    def from_script(cls, script, mainnet=None, version=0):
+        from .script import P2wshScript, P2shScript, P2wpkhScript
+
+        if script.__class__ is P2shScript or isinstance(script, P2wpkhScript):
+            raise ValueError("Can't embed {} in P2WSH".format(script.__class__.__name__))
+
         if isinstance(script, P2wshScript):
+            script_version = script.__class__.get_version()
+            if script_version != version:
+                raise ValueError('Script version is {}, requested version is {}'.format(script_version, version))
             hashed_data = script.scripthash
         else:
             hashed_data = script.p2wsh_hash()
+
         return cls(hashed_data, version, mainnet)
 
     @classmethod
