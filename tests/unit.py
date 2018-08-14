@@ -175,6 +175,16 @@ class TestHD(unittest.TestCase):
             pubs += newpubs
             privs += newprivs
 
+    def test_decode_fail(self):
+
+        with self.assertRaises(ValueError):
+            ExtendedPublicKey.decode('tprv8kxXxKwakWDtXvKBjjR5oHDFS7Z21HCVLMVUqEFCSVChUZ26BMDD'
+                                     'H1JmaGUTEYGMUyQQBSfTgEK76QBvLephodJid5GTEiGFVGJdEBYptd7')
+
+        with self.assertRaises(ValueError):
+            ExtendedPrivateKey.decode('tpubDHea6jyptsuZRPLydP5gCgsN194xAcPPuf6G7kHVrm16K3Grok2'
+                                      'oTVvdkNvPM465uuKAShgba7A2hHYeGGuS9B8AQGABfc6hp7mpcLLJUsk')
+
 
 class TestBlock(unittest.TestCase):
     def test_block_deserialize_serialize(self):

@@ -52,6 +52,8 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
                              'in {}mainnet environment'.format('' if mainnet else 'non-',
                                                                'non-' if mainnet else ''))
 
+        cls._check_decode(string)
+
         decoded = b58decode_check(string)
         parser = Parser(bytearray(decoded))
         parser >> 4
@@ -83,6 +85,10 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     @abstractmethod
     def decode_key(keydata):
         raise NotImplemented
+
+    @staticmethod
+    def _check_decode(string):
+        pass
 
     @staticmethod
     @abstractmethod
@@ -203,6 +209,11 @@ class ExtendedPrivateKey(ExtendedKey):
     def decode_key(keydata):
         return PrivateKey(keydata[1:])
 
+    @staticmethod
+    def _check_decode(string):
+        if string[:4] not in (Constants.get('xprv.prefix').values()):
+            raise ValueError('Non matching prefix: {}'.format(string[:4]))
+
     def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
         if not isinstance(key, PrivateKey):
             raise TypeError('ExtendedPrivateKey expects a PrivateKey')
@@ -253,6 +264,11 @@ class ExtendedPublicKey(ExtendedKey):
     @staticmethod
     def decode_key(keydata):
         return PublicKey(keydata)
+
+    @staticmethod
+    def _check_decode(string):
+        if string[:4] not in (Constants.get('xpub.prefix').values()):
+            raise ValueError('Non matching prefix: {}'.format(string[:4]))
 
     def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
         if not isinstance(key, PublicKey):
