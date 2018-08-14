@@ -158,7 +158,7 @@ class TestHD(unittest.TestCase):
 
     def test_priv_pub(self):
         masterpub = ExtendedPublicKey.decode(hd_keys[0]['pub'], strict=False)
-        masterpriv = ExtendedPublicKey.decode(hd_keys[0]['prv'], strict=False)
+        masterpriv = ExtendedPrivateKey.decode(hd_keys[0]['prv'], strict=False)
         pubs = [masterpub]
         privs = [masterpriv]
         paths = ['m/0/1/2147483646/2',
