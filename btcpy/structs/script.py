@@ -926,14 +926,15 @@ class AbsoluteTimelockScript(ScriptPubKey):
 
     @staticmethod
     def verify(bytes_):
+        from .transaction import Locktime, LocktimeValueOutOfRange
         try:
             parser = ScriptParser(bytes_)
             locktime = int(parser.get_push())
             parser.require('OP_CHECKLOCKTIMEVERIFY')
             parser.require('OP_DROP')
             script = parser >> len(parser)
-            return locktime, ScriptBuilder.identify(script, inner=True)
-        except (UnexpectedOperationFound, StopIteration, IndexError) as exc:
+            return Locktime(locktime), ScriptBuilder.identify(script, inner=True)
+        except (UnexpectedOperationFound, LocktimeValueOutOfRange, StopIteration, IndexError) as exc:
             raise WrongScriptTypeException(str(exc))
 
     def __init__(self, *args):
@@ -984,14 +985,15 @@ class RelativeTimelockScript(ScriptPubKey):
 
     @staticmethod
     def verify(bytes_):
+        from .transaction import Sequence, SequenceValueOutOfRange
         try:
             parser = ScriptParser(bytes_)
             sequence = parser.get_push()
             parser.require('OP_CHECKSEQUENCEVERIFY')
             parser.require('OP_DROP')
             script = parser >> len(parser)
-            return sequence, ScriptBuilder.identify(script, inner=True)
-        except (UnexpectedOperationFound, StopIteration) as exc:
+            return Sequence(int(sequence)), ScriptBuilder.identify(script, inner=True)
+        except (UnexpectedOperationFound, StopIteration, SequenceValueOutOfRange) as exc:
             raise WrongScriptTypeException(str(exc))
 
     def __init__(self, *args):
@@ -1001,12 +1003,11 @@ class RelativeTimelockScript(ScriptPubKey):
         they are interpreted as `sequence` and `locked_script` respectively, the script is
         then generated from these params
         """
-        from .transaction import Sequence
         if len(args) == 1:
             script = args[0]
             sequence, locked_script = self.verify(script.body)
             object.__setattr__(self, 'locked_script', locked_script)
-            object.__setattr__(self, 'sequence', Sequence(int(sequence)))
+            object.__setattr__(self, 'sequence', sequence)
             super().__init__(script.body)
         elif len(args) == 2:
             sequence, locked_script = args

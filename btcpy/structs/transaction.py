@@ -21,6 +21,14 @@ from ..lib.types import Immutable, Mutable, Jsonizable, HexSerializable, cached
 from ..lib.parsing import Parser, TransactionParser, Stream
 
 
+class SequenceValueOutOfRange(ValueError):
+    pass
+
+
+class LocktimeValueOutOfRange(ValueError):
+    pass
+
+
 # noinspection PyUnresolvedReferences
 class Sequence(Immutable, HexSerializable):
 
@@ -35,7 +43,7 @@ class Sequence(Immutable, HexSerializable):
     @classmethod
     def create(cls, seq, blocks=True, disable=False):
         if not 0 <= seq <= 0xffff:
-            raise ValueError('Sequence value out of range: {}'.format(seq))
+            raise SequenceValueOutOfRange('Sequence value out of range: {}'.format(seq))
         flags = 0
         if not blocks:
             flags |= 1 << Sequence.type_flag_position
@@ -45,7 +53,7 @@ class Sequence(Immutable, HexSerializable):
 
     def __init__(self, seq):
         if not 0 <= seq <= self.MAX:
-            raise ValueError('Sequence value out of range: {}'.format(seq))
+            raise SequenceValueOutOfRange('Sequence value out of range: {}'.format(seq))
         object.__setattr__(self, 'seq', seq)
 
     @property
@@ -341,7 +349,7 @@ class Locktime(Immutable, HexSerializable):
     def __init__(self, n):
 
         if not 0 <= n <= self.MAX:
-            raise ValueError('Locktime out of range: {}'.format(n))
+            raise LocktimeValueOutOfRange('Locktime out of range: {}'.format(n))
 
         object.__setattr__(self, 'n', n)
 
