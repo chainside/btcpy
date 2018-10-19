@@ -6,7 +6,7 @@ developed with :heart: by <a href="https://www.chainside.net">chainside</a>
 
 
 # btcpy
-`btcpy` is a Python3 SegWit-compliant library which provides tools to handle
+`btcpy` is a Python>=3.3 SegWit-compliant library which provides tools to handle
 Bitcoin data structures in a simple fashion. In particular, the main goal of
 this library is to provide a simple interface to parse and create complex
 Bitcoin scripts.
@@ -14,6 +14,7 @@ Bitcoin scripts.
 **N.B.: this library is a work in progress so it is highly discouraged to use it in
 a production environment. Also, as long as the version is 0.\*, API breaking changes
 should be expected**
+
 
 Table of Contents
 =================
@@ -26,7 +27,9 @@ Table of Contents
    * [What it does not do](#what-it-does-not-do)
    * [Structure](#structure)
    * [Usage examples](#usage-examples)
-      * [Network setup](#network-setup)
+      * [Setup](#setup)
+         * [Network](#network)
+         * [Strictness](#strictness)
       * [Parsing and serialization](#parsing-and-serialization)
       * [Keys](#keys)
          * [HD keys](#hd-keys)
@@ -47,6 +50,7 @@ Table of Contents
    * [Contributing and running tests](#contributing-and-running-tests)
    * [Roadmap to v1](#roadmap-to-v1)
    * [TODO](#todo)
+   * [Acknowledgements](#acknowledgements)
 
 
 # Requirements
@@ -101,9 +105,20 @@ interface, while objects located in `btcpy.lib` are used internally.
 
 # Usage examples
 
-## Network setup
-The first thing to do the first time this package is imported is to set the
-network on which it has to work. This is achieved by doing:
+## Setup
+The first thing to do the first time this package is imported is to set a global state which
+indicates on which network you are working and wether you want strict mode enabled.
+These two settings are further explained in the following sections.
+
+To setup `btcpy`, you can use the following function
+
+```python
+from btcpy.setup import setup
+setup('regtest', strict=True)
+```
+
+### Network
+You can setup the network you will work on by calling:
 
 ```python
 from btcpy.setup import setup
@@ -116,10 +131,35 @@ supported network types are:
     testnet
     mainnet
 
-The `btcpy.setup` module also provides the following functions:
+The `btcpy.setup` module also provides the following network-related functions:
 
     is_mainnet() - returns True if 'mainnet' was selected, False otherwise
     net_name()   - returns the value that was selected when calling setup()
+
+### Strictness
+`btcpy` never performs validation. However, we don't want you to inadvertently lose your funds
+for a mistake, so, in strict mode, when you do something that looks dangerous, the library
+always makes sure that you know exactly what you are doing.
+
+To setup the library in strict mode, you can run the setup as follows:
+
+```python
+setup(my_network, strict=True)  # True is actually the default for strict mode, the only other option is False
+```
+
+Additionally, you can force (non-)strictness on specific functions that have a `strict=None`
+as keyword argument. If the `strict` keyword argument is left to `None`, then the strictness
+specified in the `setup` will be followed, otherwise the param you pass to `strict` will be used.
+
+The following additional checks are done when in `strict` mode:
+* Do not allow to create `P2pkScript`s with public keys that have an invalid format (please note that
+during parsing such scripts will not even be recognised as scripts of type `'p2pk'`
+when strict mode is enabled, they will instead be recognised as of type `'nonstandard'`)
+* Do not allow to create m-of-n `MultisigScript`s with less than `m` public keys that have a valid format
+(please note that during parsing such scripts will not even be recognised as scripts of type `'multisig'`
+when strict mode is enabled, they will instead be recognised as of type `'nonstandard'`)
+* Do not allow to decode `ExtendedPublicKeys` or `ExtendedPrivateKeys` that don't match the network you set in `setup`
+* Do not allow to decode `Address`es that don't match the network you set in `setup`
     
 ## Parsing and serialization
 `Transaction`, `PublicKey`, `PrivateKey` and `Block` can be extracted
@@ -260,7 +300,7 @@ the following hierarchy
     * `NulldataScript`
     * `MultisigScript`
     * `IfElseScript`
-    * `TimelockScript`
+    * `AbsoluteTimelockScript`
     * `RelativeTimelockScript`
     * `Hashlock256Script`
     * `Hashlock160Script`
@@ -428,6 +468,17 @@ Traceback (most recent call last):
 btcpy.structs.address.WrongScriptType: Trying to produce P2pkhAddress from P2shScript script
 ```
 
+On the other hand, addresses can also be directly converted to the scripts they represent:
+
+```python
+>>> a = Address.from_string('mkGY1QBotzNCrpJaEsje3BpYJsktksi3gJ')
+>>> a.to_script()
+P2pkhScript('341e8815a2e5987d465c6c5c1fb56395cb96e400')
+>>> a = Address.from_string('tb1qxs0gs9dzukv863jud3wpldtrjh9edeqqqzahcz')
+>>> a.to_script()
+P2wpkhScript('341e8815a2e5987d465c6c5c1fb56395cb96e400')
+```
+
 ## Transactions
 
 ### Creating transactions
@@ -446,6 +497,9 @@ methods for creation:
    [BIP68](https://github.com/bitcoin/bips/blob/master/bip-0068.mediawiki) specification.
   * `max()`, this automatically creates a `Sequence` object with the maximum sequence number
    (i.e. `0xffffffff`).
+* `TimebasedSequence`, behaves like a `Sequence` but assumes the sequence expresses time. Can
+also be instantiated from a `timedelta` object through its `from_timedelta` method
+* `HeightBasedSequence`, behaves like a `Sequence` but assumes the sequence expresses a block height.
 * `ScriptSig`, this can be initialised with a `bytearray` representing the script, but offers
 the following static methods:
   * `empty()`, this creates an empty `ScriptSig`, useful when initialising a transaction
@@ -459,10 +513,12 @@ sent.
 * `ScriptPubKey` and derived classes, they take as input a `bytearray` representing the script
 but can also be created through the `ScriptBuilder.identify()` method or in the way displayed
 later in this section.
-* `Locktime`, takes as input a number representing the transaction's locktime field.
+* `Locktime`, takes as input a number representing the transaction's locktime field. Can also
+be constructed from a `datetime` object through its `from_datetime` method
 * `Transaction`, takes as inputs: a version number, a list of `TxIn`s, a list of `TxOut`s, a
 `Locktime`.
 * `SegWitTransaction`, has the same interface as `Transaction`
+* `TransactionFactory` used to instantiate a generic transaction from a json or hex string
 
 All the aforementioned classes are `Immutable`, this means that, after construction, their
 attributes can't be mutated. This helps caching values returned by their methods. The classes
@@ -470,6 +526,39 @@ attributes can't be mutated. This helps caching values returned by their methods
 `MutableTransaction`, `MutableSegWitTransaction` and `MutbleTxIn`, respectively. These mutable
 versions are mainly used to create unsigned transactions which then are mutated
 to add signatures to them. We will see how to use these in the rest of this section.
+
+Transactions can be deserialized both from json and from a hex string, see the following examples:
+```python
+>>> tx = Transaction.unhexlify('0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce605000000006b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b000000001976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000')
+>>> tx.to_json()
+{'hex': '0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce605000000006b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b000000001976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000', 'txid': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'hash': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'size': 192, 'vsize': 192, 'version': 1, 'locktime': 0, 'vin': [{'txid': '05e69c373f787ab7635465db94225307e4ad6685d3df63ff605efebe3f17dae4', 'vout': 0, 'scriptSig': {'asm': '3045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f101 02ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2', 'hex': '483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2'}, 'sequence': '4294967295'}], 'vout': [{'value': '2.00000000', 'n': 0, 'scriptPubKey': {'asm': 'OP_DUP OP_HASH160 df76c017354ac39bde796abe4294d31de8b5788a OP_EQUALVERIFY OP_CHECKSIG', 'hex': '76a914df76c017354ac39bde796abe4294d31de8b5788a88ac', 'type': 'p2pkh', 'address': '1MNZwhTBHN3QTXkwob7NvhVaTVKUm7MRCg'}}]}
+>>> tx = SegWitTransaction.unhexlify('0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce605000000006b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b000000001976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000')
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/home/rael/Dropbox/projects/btcpy/btcpy/structs/transaction.py", line 457, in unhexlify
+    return cls.deserialize(bytearray(unhexlify(string)))
+  File "/home/rael/Dropbox/projects/btcpy/btcpy/structs/transaction.py", line 466, in deserialize
+    raise TypeError('Trying to load transaction from wrong transaction serialization')
+TypeError: Trying to load transaction from wrong transaction serialization
+>>> tx = Transaction.from_json({'hex': '0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce605000000006b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b000000001976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000', 'txid': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'hash': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'size': 192, 'vsize': 192, 'version': 1, 'locktime': 0, 'vin': [{'txid': '05e69c373f787ab7635465db94225307e4ad6685d3df63ff605efebe3f17dae4', 'vout': 0, 'scriptSig': {'asm': '3045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f101 02ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2', 'hex': '483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2'}, 'sequence': '4294967295'}], 'vout': [{'value': '2.00000000', 'n': 0, 'scriptPubKey': {'asm': 'OP_DUP OP_HASH160 df76c017354ac39bde796abe4294d31de8b5788a OP_EQUALVERIFY OP_CHECKSIG', 'hex': '76a914df76c017354ac39bde796abe4294d31de8b5788a88ac', 'type': 'p2pkh', 'address': '1MNZwhTBHN3QTXkwob7NvhVaTVKUm7MRCg'}}]})
+>>> tx = SegWitTransaction.from_json({'hex': '0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce605000000006b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b000000001976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000', 'txid': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'hash': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'size': 192, 'vsize': 192, 'version': 1, 'locktime': 0, 'vin': [{'txid': '05e69c373f787ab7635465db94225307e4ad6685d3df63ff605efebe3f17dae4', 'vout': 0, 'scriptSig': {'asm': '3045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f101 02ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2', 'hex': '483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2'}, 'sequence': '4294967295'}], 'vout': [{'value': '2.00000000', 'n': 0, 'scriptPubKey': {'asm': 'OP_DUP OP_HASH160 df76c017354ac39bde796abe4294d31de8b5788a OP_EQUALVERIFY OP_CHECKSIG', 'hex': '76a914df76c017354ac39bde796abe4294d31de8b5788a88ac', 'type': 'p2pkh', 'address': '1MNZwhTBHN3QTXkwob7NvhVaTVKUm7MRCg'}}]})
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/home/rael/Dropbox/projects/btcpy/btcpy/structs/transaction.py", line 737, in from_json
+    raise TypeError('Trying to load segwit transaction from non-segwit transaction json')
+TypeError: Trying to load segwit transaction from non-segwit transaction json
+```
+
+As you can see from the previous example, `Transaction` and `SegWitTransaction` classes can deserialise only
+json and hex strings of the appropriate type. To deserialize a generic json or hex string and build the 
+appropriate object, one can use the `TransactionFactory`:
+
+```python
+>>> TransactionFactory.unhexlify('0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce605000000006b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b000000001976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000')
+<btcpy.structs.transaction.Transaction object at 0x7f3717961be0>
+>>> TransactionFactory.from_json({'hex': '0100000001e4da173fbefe5e60ff63dfd38566ade407532294db655463b77a783f379ce605000000006b483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2ffffffff0100c2eb0b000000001976a914df76c017354ac39bde796abe4294d31de8b5788a88ac00000000', 'txid': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'hash': 'e977c07090c2a1dcaefd3f3c4ebf4e231f4116cb272f805b0b22a85e7eece09c', 'size': 192, 'vsize': 192, 'version': 1, 'locktime': 0, 'vin': [{'txid': '05e69c373f787ab7635465db94225307e4ad6685d3df63ff605efebe3f17dae4', 'vout': 0, 'scriptSig': {'asm': '3045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f101 02ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2', 'hex': '483045022100af246c27890c2bc07a0b7450d3d82509702a44a4defdff766355240b114ee2ac02207bb67b468452fa1b325dd5583879f5c1412e0bb4dae1c2c96c7a408796ab76f1012102ab9e8575536a1e99604a158fc60fe2ebd1cb1839e919b4ca42b8d050cfad71b2'}, 'sequence': '4294967295'}], 'vout': [{'value': '2.00000000', 'n': 0, 'scriptPubKey': {'asm': 'OP_DUP OP_HASH160 df76c017354ac39bde796abe4294d31de8b5788a OP_EQUALVERIFY OP_CHECKSIG', 'hex': '76a914df76c017354ac39bde796abe4294d31de8b5788a88ac', 'type': 'p2pkh', 'address': '1MNZwhTBHN3QTXkwob7NvhVaTVKUm7MRCg'}}]})
+<btcpy.structs.transaction.Transaction object at 0x7f3717971518>
+```
 
 Example of a transaction creation:
 
@@ -534,7 +623,7 @@ parameters:
 | `NulldataScript`              | An OP_RETURN script | A `StackData` representing the data to store in the transaction |
 | `MultisigScript`              | A multisig script, where m out of n keys are needed to spend | `m`, the number of signatures needed to spend this output, an arbitrary number of `PublicKeys`, `n` the number of public keys provided |
 | `IfElseScript`              | A script consisting of an `OP_IF`, a script, an `OP_ELSE`, another script and an `OP_ENDIF` | Two `ScriptPubKey` scripts, the first to be executed in the if branch, the second to be executed in the else branch |
-| `TimelockScript`              | A script consisting of `<pushdata> OP_CHECKLOCKTIMEVERIFY OP_DROP` and a subsequent script which can be spent only after the absolute time expressed by the `<pushdata>` is expired | A `Locktime`, expressing the absolute time/number of blocks after which the subsequent script can be spent, and the locked `ScriptPubKey` |
+| `AbsoluteTimelockScript`              | A script consisting of `<pushdata> OP_CHECKLOCKTIMEVERIFY OP_DROP` and a subsequent script which can be spent only after the absolute time expressed by the `<pushdata>` is expired | A `Locktime`, expressing the absolute time/number of blocks after which the subsequent script can be spent, and the locked `ScriptPubKey` |
 | `RelativeTimelockScript`      | A script consisting of `<pushdata> OP_CHECKSEQUENCEVERIFY OP_DROP` and a subsequent script which can be spent only after the relative time time expressed by the `<pushdata>` is expired | A `Sequence`, expressing the relative time/ number of blocks after which the subsequent script can be spent, and the locked `ScriptPubKey` |
 | `Hashlock256Script`           | A script consisting of `OP_HASH256 <pushdata> OP_EQUALVERIFY` and a subsequent script which can be spent only after providing the preimage of `<pushdata>` for the double SHA256 hash function | Either a `bytearray` or `StackData` representing the hashed value that locks the subsequent script, plus the locked `ScriptPubKey` |
 | `Hashlock160Script`           | A script consisting of `OP_HASH160 <pushdata> OP_EQUALVERIFY` and a subsequent script which can be spent only after providing the preimage of `<pushdata>` for the RIPEMPD160 of the SHA256 hash function | Either a `bytearray` or `StackData` representing the hashed value that locks the subsequent script, plus the locked `ScriptPubKey` |
@@ -570,7 +659,9 @@ Additionally, the following solvers are available and they take the following in
 | `P2wshV0Solver`  | a `ScriptPubKey`, representing the witnessScript and a `Solver` which solves the inner witnessScript | `P2wshV0Script`   |
 | `MultisigSolver` | an arbitrary number of `PrivateKey`s                                                                 | `MultisigScript`  |
 | `IfElseSolver`   | an object of type `Branch`. This is an enum and its values are `Branch.IF` and `Branch.ELSE`, these are used to specify whether we are spending the `if` or `else` branch of the script. The second parameter is a `Solver` for the script inside the desired branch. | `IfElseScript` |
-| `TimelockSolver` | a `Solver` of the inner timelocked script | `TimelockedScript`, `RelativeTimelockScript` |
+| `TimelockSolver` | a `Solver` of the inner timelocked script | `AbsoluteTimelockScript`, `RelativeTimelockScript` |
+| `RelativeTimelockSolver` | a `Solver` of the inner timelocked script, with absolute timelocks | `RelativeTimelockScript` |
+| `AbsoluteTimelockSolver` | a `Solver` of the inner timelocked script, with relative timelocks | `AbsoluteTimelockScript` |
 | `HashlockSolver` | the preimage needed to spend the script, as a `bytearray`, and a `Solver` for the hashlocked script | `Hashlock256Script`, `Hashlock160Script` |
 
 
@@ -780,7 +871,7 @@ Let's write the solvers for this script:
 >>> solver_if = IfElseSolver(Branch.IF,                      # branch selection
 ...                          MultisigSolver(privk, privk2))  # inner solver
 >>> solver_else = IfElseSolver(Branch.ELSE,
-...                            TimelockSolver(P2pkhSolver(privk)))
+...                            RelativeTimelockSolver(Sequence(5), P2pkhSolver(privk)))
 ```
 
 ### Low-level signing
@@ -845,3 +936,7 @@ done eventually:
 * Add further transaction creation helpers
 * Add RPC calls to Bitcoin Core nodes
 * Add networking with Bitcoin Core nodes
+
+# Acknowledgements
+Special thanks to [gdecicco](https://github.com/gdecicco) and [lorenzogiust](https://github.com/lorenzogiust)
+for contributing with performance improvements and general review.

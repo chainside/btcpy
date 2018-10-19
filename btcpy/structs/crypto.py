@@ -19,8 +19,12 @@ from abc import ABCMeta
 
 from ..lib.types import HexSerializable
 from .address import P2pkhAddress, P2wpkhAddress
-from ..setup import is_mainnet, net_name
+from ..setup import is_mainnet, net_name, strictness
 from ..constants import Constants
+
+
+class WrongPubKeyFormat(Exception):
+    pass
 
 
 class Key(HexSerializable, metaclass=ABCMeta):
@@ -32,7 +36,8 @@ class PrivateKey(Key):
     highest_s = 0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0
 
     @staticmethod
-    def from_wif(wif, check_network=True):
+    @strictness
+    def from_wif(wif, strict=None):
 
         if not 51 <= len(wif) <= 52:
             raise ValueError('Invalid wif length: {}'.format(len(wif)))
@@ -43,7 +48,7 @@ class PrivateKey(Key):
         if prefix not in Constants.get('wif.prefixes').values():
             raise ValueError('Unknown private key prefix: {:02x}'.format(prefix))
 
-        if check_network:
+        if strict:
             if prefix != Constants.get('wif.prefixes')['mainnet' if is_mainnet() else 'testnet']:
                 raise ValueError('{0} prefix in non-{0} environment'.format(net_name()))
 
@@ -107,20 +112,19 @@ class PrivateKey(Key):
         return self.hexlify()
 
 
-class WrongPubKeyFormat(Exception):
-    pass
-
-
-class PublicKey(Key):
+class BasePublicKey(Key):
 
     p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f
     uncompressed_bytes = 64
     compressed_bytes = uncompressed_bytes // 2
     types = {0x02: 'even',
              0x03: 'odd',
-             0x04: 'uncompressed'}
+             0x04: 'uncompressed',
+             0x06: 'uncompressed',
+             0x07: 'uncompressed'}
 
-    headers = {val: key for key, val in types.items()}
+    uncompressed_headers = {header for header, type in types.items() if type == 'uncompressed'}
+    compressed_headers = types.keys() - uncompressed_headers
 
     @staticmethod
     def from_point(point, compressed=True):
@@ -137,10 +141,19 @@ class PublicKey(Key):
     def from_priv(priv):
         return priv.pub()
 
-    @staticmethod
-    def uncompress(pubkey):
+    def __str__(self):
+        return self.hexlify()
+
+    def __len__(self):
+        return len(str(self)) // 2
+
+
+class PublicKey(BasePublicKey):
+
+    @classmethod
+    def uncompress(cls, pubkey):
         header, *body = pubkey
-        if header not in {0x02, 0x03}:
+        if header not in cls.compressed_headers:
             raise WrongPubKeyFormat('Pubkey header does not indicate compressed key: 0x{:02x}'.format(header))
         PublicKey.check(pubkey)
         parity = header - 2  # if 0x02 parity is 0, if 0x03 parity is 1
@@ -151,8 +164,8 @@ class PublicKey(Key):
             y = -y % PublicKey.p
         return bytearray([0x04]) + bytearray(body) + bytearray(y.to_bytes(PublicKey.compressed_bytes, 'big'))
 
-    @staticmethod
-    def check(pubkey):
+    @classmethod
+    def check(cls, pubkey):
         if type(pubkey) not in {bytes, bytearray}:
             raise ValueError('Unexpected data type for pubkey: {}'.format(type(pubkey)))
 
@@ -161,10 +174,10 @@ class PublicKey(Key):
         except ValueError:
             raise WrongPubKeyFormat('Got only one byte')
 
-        if header == 0x04:
+        if header in cls.uncompressed_headers:
             if len(body) != PublicKey.uncompressed_bytes:
                 raise WrongPubKeyFormat('Unexpected length for uncompressed pubkey: {}'.format(len(body)))
-        elif header in {0x02, 0x03}:
+        elif header in cls.compressed_headers:
             if len(body) != PublicKey.compressed_bytes:
                 raise WrongPubKeyFormat('Unexpected length for compressed pubkey: {}'.format(len(body)))
         else:
@@ -181,12 +194,6 @@ class PublicKey(Key):
             self.compressed = pubkey
             self.uncompressed = PublicKey.uncompress(pubkey)
 
-    def __str__(self):
-        return self.hexlify()
-
-    def __len__(self):
-        return len(str(self)) // 2
-
     def hash(self):
         import hashlib
         original = self.uncompressed if self.type == 'uncompressed' else self.compressed
@@ -194,6 +201,11 @@ class PublicKey(Key):
         ripe = hashlib.new('ripemd160')
         ripe.update(sha)
         return bytearray(ripe.digest())
+
+    def compress(self):
+        if self.type != 'uncompressed':
+            return self
+        return PublicKey(self.compressed)
 
     def serialize(self):
         return self.uncompressed if self.type == 'uncompressed' else self.compressed
@@ -211,11 +223,6 @@ class PublicKey(Key):
         else:
             pubk = self
         return P2wpkhAddress(pubk.hash(), version, mainnet)
-
-    def compress(self):
-        if self.type != 'uncompressed':
-            return self
-        return PublicKey(self.compressed)
 
     def __eq__(self, other):
         return (self.type, self.compressed, self.uncompressed) == (other.type, other.compressed, other.uncompressed)

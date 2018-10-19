@@ -18,8 +18,9 @@ from abc import ABCMeta, abstractmethod
 from ..lib.types import HexSerializable, Immutable, cached
 from ..lib.parsing import ScriptParser, Parser, Stream, UnexpectedOperationFound
 from ..lib.opcodes import OpCodeConverter
-from .crypto import WrongPubKeyFormat
+from .crypto import WrongPubKeyFormat, PublicKey
 from .address import P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
+from ..setup import strictness
 
 
 class WrongScriptTypeException(Exception):
@@ -199,20 +200,17 @@ class StackData(Immutable, HexSerializable):
 
     @cached
     def serialize(self):
-        if self.data:
-            return Parser.to_varint(len(self)) + self.data
-        else:
-            if self.push_op[0] == 0:
-                return Parser.to_varint(0) + bytearray()
-            else:
-                if self.push_op[0] in (79, 80):
-                    return Parser.to_varint(1) + bytearray([(self.push_op[0])])
-                elif self.push_op[0] in (81, 96):
-                    return Parser.to_varint(1) + bytearray([(self.push_op[0] - 80)])
-                elif self.push_op[0] in range(76, 79):
-                    return self.push_op
-                else:  # 1-75
-                    return self.push_op
+        if self.push_op[0] == 0:
+            return Parser.to_varint(0) + bytearray()
+
+        if self.push_op[0] in (79, 80):
+            return Parser.to_varint(1) + bytearray([self.push_op[0]])
+
+        if self.push_op[0] in range(81, 97):
+            return Parser.to_varint(1) + bytearray([self.push_op[0] - 80])
+
+        # 1-75
+        return Parser.to_varint(len(self)) + self.data
 
 
 # noinspection PyUnresolvedReferences
@@ -647,19 +645,33 @@ class P2pkScript(ScriptPubKey):
 
     template = '<33|65> OP_CHECKSIG'
 
-    def __init__(self, param):
+    @strictness
+    def __init__(self, param, strict=None):
         """
         :param param: can be either of type `Script` or `PublicKey`.
-        In the first case it is verifyed and the public key is extracted.
+        In the first case it is verified and the public key is extracted.
         In the second case the script is built from the public key
         """
-        from .crypto import PublicKey
         if isinstance(param, Script):
-            object.__setattr__(self, 'pubkey', PublicKey(self.verify(param.body).data))
+            pubkey = self.verify(param.body)
+
+            try:
+                object.__setattr__(self, 'pubkey', PublicKey(pubkey.data))
+            except WrongPubKeyFormat:
+                if strict:
+                    raise
+                object.__setattr__(self, 'pubkey', pubkey)
+
             super().__init__(param.body)
         elif isinstance(param, PublicKey):
             object.__setattr__(self, 'pubkey', param)
             super().__init__(self.compile('{} OP_CHECKSIG'.format(self.pubkey.hexlify())))
+        elif isinstance(param, StackData):
+            if strict:
+                raise TypeError('Must provide an object of type PublicKey in strict mode')
+            if len(param) not in (33, 65):
+                raise WrongScriptTypeException('Public keys must be either 33 or 65 bytes long')
+            object.__setattr__(self, 'pubkey', param)
         else:
             raise TypeError('Wrong type for P2pkScript __init__: {}'.format(type(param)))
 
@@ -712,9 +724,33 @@ class MultisigScript(ScriptPubKey):
 
     template = '<>+ OP_CHECKMULTISIG'
 
+    @staticmethod
+    def _parse_pubkeys(pubkeys):
+        result = []
+        for pubkey in pubkeys:
+            try:
+                result.append(PublicKey(pubkey.data))
+            except WrongPubKeyFormat:
+                result.append(pubkey)
+        return result
+
+    @staticmethod
+    def _verify_pubkeys(pubkeys):
+        valid = 0
+        for pubkey in pubkeys:
+            if isinstance(pubkey, PublicKey):
+                valid += 1
+            elif isinstance(pubkey, StackData):
+                if len(pubkey) not in (33, 65):
+                    raise WrongScriptTypeException('Multisig public keys must be either 33 or 65 bytes long')
+            else:
+                raise TypeError('Passed type {} as public key'.format(type(pubkey)))
+        return valid
+
     @classmethod
-    def verify(cls, bytes_):
-        from .crypto import PublicKey
+    @strictness
+    def verify(cls, bytes_, strict=None):
+
         parser = ScriptParser(bytes_)
         if not bytes_:
             raise WrongScriptTypeException('Empty script')
@@ -729,9 +765,16 @@ class MultisigScript(ScriptPubKey):
         if len(pubkeys) == 0 or len(pubkeys) != int(n):
             raise WrongScriptTypeException('Non-matching N and number of pubkeys')
 
-        return [int(m), *[PublicKey(pubkey.data) for pubkey in pubkeys], int(n)]
+        pubkeys = cls._parse_pubkeys(pubkeys)
+        valid = cls._verify_pubkeys(pubkeys)
 
-    def __init__(self, *args):
+        if strict and valid < int(m):
+            raise WrongPubKeyFormat('{} valid public keys while m is {}'.format(valid, int(m)))
+
+        return [int(m)] + pubkeys + [int(n)]
+
+    @strictness
+    def __init__(self, *args, strict=None):
         """
         :param args: if one arg is provided that is interpreted as a precompiled script which needs
         verification to see if it belongs to this type. Once verification is done, `m`, a list of pubkeys
@@ -745,9 +788,13 @@ class MultisigScript(ScriptPubKey):
             # we expect something of type Script
             script = args[0]
             super().__init__(script.body)
-            m, *pubkeys, n = self.verify(script.body)
+            m, *pubkeys, n = self.verify(script.body, strict=strict)
         else:
             m, *pubkeys, n = args
+
+            valid = self._verify_pubkeys(pubkeys)
+            if strict and valid < m:
+                raise WrongPubKeyFormat('{} valid public keys while m is {}'.format(valid, m))
 
         if n != len(pubkeys):
             raise ValueError('Pushed {} keys but n is {}'.format(len(pubkeys), n))
@@ -875,18 +922,19 @@ class IfElseScript(ScriptPubKey):
 
 
 # noinspection PyUnresolvedReferences
-class TimelockScript(ScriptPubKey):
+class AbsoluteTimelockScript(ScriptPubKey):
 
     @staticmethod
     def verify(bytes_):
+        from .transaction import Locktime, LocktimeValueOutOfRange
         try:
             parser = ScriptParser(bytes_)
             locktime = int(parser.get_push())
             parser.require('OP_CHECKLOCKTIMEVERIFY')
             parser.require('OP_DROP')
             script = parser >> len(parser)
-            return locktime, ScriptBuilder.identify(script, inner=True)
-        except (UnexpectedOperationFound, StopIteration, IndexError) as exc:
+            return Locktime(locktime), ScriptBuilder.identify(script, inner=True)
+        except (UnexpectedOperationFound, LocktimeValueOutOfRange, StopIteration, IndexError) as exc:
             raise WrongScriptTypeException(str(exc))
 
     def __init__(self, *args):
@@ -922,10 +970,10 @@ class TimelockScript(ScriptPubKey):
             super().__init__(script_body.serialize())
 
         else:
-            raise TypeError('Wrong number of params for TimelockScript __init__: {}'.format(len(args)))
+            raise TypeError('Wrong number of params for AbsoluteTimelockScript __init__: {}'.format(len(args)))
 
     def __repr__(self):
-        return 'TimelockScript({}, {})'.format(self.locktime, self.locked_script)
+        return 'AbsoluteTimelockScript({}, {})'.format(self.locktime, self.locked_script)
 
     @property
     def type(self):
@@ -937,14 +985,15 @@ class RelativeTimelockScript(ScriptPubKey):
 
     @staticmethod
     def verify(bytes_):
+        from .transaction import Sequence, SequenceValueOutOfRange
         try:
             parser = ScriptParser(bytes_)
             sequence = parser.get_push()
             parser.require('OP_CHECKSEQUENCEVERIFY')
             parser.require('OP_DROP')
             script = parser >> len(parser)
-            return sequence, ScriptBuilder.identify(script, inner=True)
-        except (UnexpectedOperationFound, StopIteration) as exc:
+            return Sequence(int(sequence)), ScriptBuilder.identify(script, inner=True)
+        except (UnexpectedOperationFound, StopIteration, SequenceValueOutOfRange) as exc:
             raise WrongScriptTypeException(str(exc))
 
     def __init__(self, *args):
@@ -954,12 +1003,11 @@ class RelativeTimelockScript(ScriptPubKey):
         they are interpreted as `sequence` and `locked_script` respectively, the script is
         then generated from these params
         """
-        from .transaction import Sequence
         if len(args) == 1:
             script = args[0]
             sequence, locked_script = self.verify(script.body)
             object.__setattr__(self, 'locked_script', locked_script)
-            object.__setattr__(self, 'sequence', Sequence(int(sequence)))
+            object.__setattr__(self, 'sequence', sequence)
             super().__init__(script.body)
         elif len(args) == 2:
             sequence, locked_script = args
@@ -1105,7 +1153,7 @@ class ScriptBuilder(object):
              MultisigScript,
              IfElseScript,
              RelativeTimelockScript,
-             TimelockScript,
+             AbsoluteTimelockScript,
              Hashlock256Script,
              Hashlock160Script,
              P2wpkhV0Script,
@@ -1133,8 +1181,7 @@ class ScriptBuilder(object):
                 candidate = script_type(Script(raw_script))
                 # print('Success')
                 return candidate
-            except (WrongScriptTypeException, WrongPubKeyFormat, WrongPushDataOp):
-                # print('Failed')
+            except (WrongScriptTypeException, WrongPubKeyFormat, WrongPushDataOp) as exc:
                 pass
         return UnknownScript(raw_script)
 
@@ -1144,17 +1191,19 @@ class ScriptBuilder(object):
 from .crypto import PublicKey
 from .transaction import Sequence
 
-IfElseScript(
-    MultisigScript(
-        2,
-        PublicKey.unhexlify("021b98b2e4ba9dae9f869bcf948c45df6b6f8e6bb623915cf144237f5e6ab98cf4"),
-        PublicKey.unhexlify("0376d53363bbeefed905fc685e4d4e1fe0cbf9959e8f59e9f5f209f489b3a62857"),
-        2
-    ),
-    RelativeTimelockScript(
-        Sequence(5),
-        P2pkhScript(
-            PublicKey.unhexlify("0376d53363bbeefed905fc685e4d4e1fe0cbf9959e8f59e9f5f209f489b3a62857")
+P2wshV0Script(
+    IfElseScript(
+        MultisigScript(
+            2,
+            PublicKey.unhexlify("021b98b2e4ba9dae9f869bcf948c45df6b6f8e6bb623915cf144237f5e6ab98cf4"),
+            PublicKey.unhexlify("0376d53363bbeefed905fc685e4d4e1fe0cbf9959e8f59e9f5f209f489b3a62857"),
+            2
+        ),
+        RelativeTimelockScript(
+            Sequence(5),
+            P2pkScript(
+                PublicKey.unhexlify("0376d53363bbeefed905fc685e4d4e1fe0cbf9959e8f59e9f5f209f489b3a62857")
+            )
         )
     )
 )

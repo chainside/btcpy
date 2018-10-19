@@ -1,0 +1,152 @@
+[
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [11, 4194314]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [10, 4194314]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [100, 4194404]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [101, 4194404]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [65396, 4260200]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [65535, 4259838]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [4194314, 11]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [4194314, 10]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [4194404, 100]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [4194404, 101]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [4260200, 65396]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [4259838, 65535]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [4259838, 2147549183]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "height",
+    "data": [2147549183, 4259838]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [153, 2147483658]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [2147483658, 153]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [35632, 2147519280]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [2147519280, 35632]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [58745, 2147542393]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [65535, 2147549183]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [2147542393, 58745]
+  },
+  {
+    "outcome": "error",
+    "error_regex": "enabled",
+    "data": [2147549183, 65535]
+  },
+  {
+    "outcome": 65535,
+    "data": [65535, 58745]
+  },
+  {
+    "outcome": 2147549183,
+    "data": [2147549183, 2147542393]
+  },
+  {
+    "outcome": 2,
+    "data": [1, 2]
+  },
+  {
+    "outcome": 122,
+    "data": [122, 7]
+  },
+  {
+    "outcome": 4199668,
+    "data": [4194318, 4199668]
+  },
+  {
+    "outcome": 54549,
+    "data": [316692, 54549]
+  },
+  {
+    "outcome": 2154839,
+    "data": [2154839, 57686]
+  },
+  {
+    "outcome": 5896,
+    "data": [8394503, 5896]
+  },
+  {
+    "outcome": 67134369,
+    "data": [1073767324, 67134369, 25503]
+  },
+  {
+    "outcome": 65543,
+    "data": [131075, 65543, 1073741829]
+  }
+]

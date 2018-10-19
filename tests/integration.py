@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 
 from .regtest import Manager
 from btcpy.structs.hd import ExtendedPrivateKey, ExtendedPublicKey
-from btcpy.structs.transaction import Transaction, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
+from btcpy.structs.transaction import TransactionFactory, Sequence, TxOut, Locktime, TxIn, MutableTransaction, MutableTxIn
 from btcpy.structs.sig import *
 from btcpy.structs.script import *
 from btcpy.setup import setup
@@ -129,7 +129,7 @@ class Embedder(metaclass=ABCMeta):
         return []
 
     def __init__(self, *args, scripts):
-        self.instance = self.get_script_cls()(*self.get_args(), *args, *scripts)
+        self.instance = self.get_script_cls()(*(list(self.get_args()) + list(args) + list(scripts)))
 
     def post(self):
         pass
@@ -172,7 +172,7 @@ class TimelockEmbedder(Embedder):
 
     @staticmethod
     def get_script_cls():
-        return TimelockScript
+        return AbsoluteTimelockScript
 
     @staticmethod
     def get_args():
@@ -214,6 +214,32 @@ class Hashlock256Embedder(Embedder):
     @staticmethod
     def get_script_cls():
         return Hashlock256Script
+
+
+def get_type(solver):
+
+    if isinstance(solver, P2pkSolver):
+        return 'p2pk'
+    elif isinstance(solver, P2pkhSolver):
+        return 'p2pkh'
+    elif isinstance(solver, MultisigSolver):
+        return 'multisig'
+    elif isinstance(solver, P2wpkhV0Solver):
+        return 'p2wpkh'
+    else:
+        if isinstance(solver, TimelockSolver):
+            return 'timelock [ {} ]'.format(get_type(solver.inner_solver))
+        elif isinstance(solver, IfElseSolver):
+            if solver.branch == Branch.IF:
+                return 'if [ {} ]'.format(get_type(solver.inner_solver))
+            else:
+                return 'else [ {} ]'.format(get_type(solver.inner_solver))
+        elif isinstance(solver, HashlockSolver):
+            return 'hashlock [ {} ]'.format(get_type(solver.inner_solver))
+        elif isinstance(solver, P2shSolver):
+            return 'p2sh [ {} ]'.format(get_type(solver.redeem_script_solver))
+        elif isinstance(solver, P2wshV0Solver):
+            return 'p2wsh [ {} ]'.format(get_type(solver.witness_script_solver))
 
 
 class TestSpends(unittest.TestCase):
@@ -311,11 +337,18 @@ class TestSpends(unittest.TestCase):
                                                  (HashlockSolver(preimage, script['solver']),
                                                   emb.instance),
                                                  '{}({})'.format(embedder.get_name(), script['name'])))
-                        else:
+                        elif embedder.get_name() == 'relativetime':
                             emb = embedder(scripts=[script['script']])
                             embedded.append((emb.instance,
-                                             (TimelockSolver(script['solver']), emb.instance),
+                                             (RelativeTimelockSolver(Sequence(3), script['solver']), emb.instance),
                                              '{}({})'.format(embedder.get_name(), script['name'])))
+                        elif embedder.get_name() == 'absolutetime':
+                            emb = embedder(scripts=[script['script']])
+                            embedded.append((emb.instance,
+                                             (AbsoluteTimelockSolver(Locktime(100), script['solver']), emb.instance),
+                                             '{}({})'.format(embedder.get_name(), script['name'])))
+                        else:
+                            raise ValueError('Unknown embedder: {}'.format(embedder.get_name()))
 
         self.all += [s for s in embedded]
 
@@ -422,7 +455,7 @@ class TestSpends(unittest.TestCase):
         for i in range(3):
             # create 3 tx to add to UTXO
             txid = regtest.send_rpc_cmd(['sendtoaddress', addr_string, '100'], 0)
-            to_spend = Transaction.unhexlify(regtest.send_rpc_cmd(['getrawtransaction', txid, '0'], 0))
+            to_spend = TransactionFactory.unhexlify(regtest.send_rpc_cmd(['getrawtransaction', txid, '0'], 0))
             txout = None
             for out in to_spend.outs:
                 if str(out.script_pubkey.address()) == addr_string:
@@ -439,12 +472,13 @@ class TestSpends(unittest.TestCase):
         regtest.send_rpc_cmd(['generate', '100'], 0)
 
         generate = False
-        next_locktime = Locktime(0)
-        next_sequence = Sequence.max()
+
+        print('|{}| {}|'.format('Spending'.ljust(60), 'Sighashes'.ljust(60)))
+        print('-'*124)
 
         i = 0
         while i < len(self.all) - 2:
-            print('{:04d}\r'.format(i), end='', flush=True)
+            # print('{:04d}\r'.format(i), end='', flush=True)
             ins = [MutableTxIn(unspent['txid'], unspent['txout'].n, ScriptSig.empty(), unspent['next_seq']) for unspent in utxo]
             outs = []
             prev_types = []
@@ -453,9 +487,14 @@ class TestSpends(unittest.TestCase):
                 outs.append(TxOut(unspent['txout'].value - 1000000, j, script[0]))
                 prev_types.append(script[2])
 
-            tx = MutableTransaction(2, ins, outs, min_locktime(unspent['next_locktime'] for unspent in utxo))
+                print('|{}| {}|'.format(get_type(unspent['solver']).ljust(60),
+                                        ', '.join([str(sh) for sh in unspent['solver'].get_sighashes()]).ljust(60)))
+                print('-'*124)
+
+            tx = MutableTransaction(2, ins, outs, Locktime(0))
             mutable = copy.deepcopy(tx)
             tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
+            # print(json.dumps({'signed': tx.to_json()}))
 
             # print('====================')
             # print('txid: {}'.format(tx.txid))
@@ -464,10 +503,10 @@ class TestSpends(unittest.TestCase):
             # print()
             # print('raw: {}'.format(tx.hexlify()))
             # print('prev_scripts, amounts, solvers:')
-
-            print('TX: {}'.format(i))
+            # print('TX: {}'.format(i))
             regtest.send_rpc_cmd(['sendrawtransaction', tx.hexlify()], 0)
-            print('Mempool size: {}'.format(len(regtest.send_rpc_cmd(['getrawmempool'], 0))))
+
+            # print('Mempool size: {}'.format(len(regtest.send_rpc_cmd(['getrawmempool'], 0))))
 
             if cmdline_args.dumpfile is not None:
                 with open(cmdline_args.dumpfile, 'a') as out:
@@ -479,28 +518,20 @@ class TestSpends(unittest.TestCase):
 
             for j, (output, prev_type) in enumerate(zip(tx.outs, prev_types)):
 
-                if 'time' in prev_type:
-                    if 'absolute' in prev_type:
-                        next_locktime = Locktime(100)
-                        next_sequence = Sequence(0xfffffffe)
-                    if 'relative' in prev_type:
-                        next_sequence = Sequence(3)
-                        generate = True
-                else:
-                    next_locktime = Locktime(0)
-                    next_sequence = Sequence.max()
+                if 'relativetime' in prev_type:
+                    generate = True
 
                 utxo.append({'txid': tx.txid,
                              'txout': output,
                              'solver': self.all[i+j][1][0],  # solver
-                             'next_seq': next_sequence,
-                             'next_locktime': next_locktime})
+                             'next_seq': Sequence.max(),
+                             'next_locktime': Locktime(0)})
             if generate:
                 regtest.send_rpc_cmd(['generate', '4'], 0)
                 generate = False
 
             if not i % 10:
-                print('generating 2')
+                # print('generating 2')
                 regtest.send_rpc_cmd(['generate', '2'], 0)
 
             i += 1
@@ -514,6 +545,7 @@ class TestSpends(unittest.TestCase):
                                 ins,
                                 [TxOut(sum(unspent['txout'].value for unspent in utxo) - 1000000, 0, self.final['script'])],
                                 min_locktime(unspent['next_locktime'] for unspent in utxo))
+
         tx = tx.spend([unspent['txout'] for unspent in utxo], [unspent['solver'] for unspent in utxo])
 
         # print('====================')

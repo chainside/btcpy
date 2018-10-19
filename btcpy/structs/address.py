@@ -11,31 +11,30 @@
 
 from abc import ABCMeta, abstractmethod
 
-from ..setup import is_mainnet
+from ..setup import is_mainnet, strictness
 
 
 class WrongScriptType(Exception):
     pass
 
 
-class BaseAddress(metaclass=ABCMeta):
+class InvalidAddress(Exception):
+    pass
 
-    @staticmethod
-    def is_valid(string, check_network=True):
-        from ..lib.codecs import CouldNotDecode
+
+class Address(metaclass=ABCMeta):
+
+    @classmethod
+    @strictness
+    def is_valid(cls, string, strict=None):
         try:
-            Address.from_string(string, check_network=check_network)
-            return True
-        except CouldNotDecode:
-            try:
-                SegWitAddress.from_string(string, check_network=check_network)
-                return True
-            except CouldNotDecode:
-                return False
+            cls.from_string(string, strict=strict)
+        except InvalidAddress:
+            return False
+        return True
 
-    @staticmethod
-    @abstractmethod
-    def get_codec():
+    @classmethod
+    def get_codec(cls):
         raise NotImplemented
 
     @classmethod
@@ -49,32 +48,34 @@ class BaseAddress(metaclass=ABCMeta):
         raise NotImplemented
 
     @classmethod
-    def from_string(cls, string, check_network=True):
-        return cls.get_codec().decode(string, check_network)
-
-    @classmethod
     def hash_length(cls):
         raise NotImplemented
-
-    def __init__(self, hashed_data):
-        if len(hashed_data) != self.__class__.hash_length():
-            raise ValueError('Hashed data must be {}-bytes long, length: {}'.format(self.__class__.hash_length(),
-                                                                                    len(hashed_data)))
 
     def __str__(self):
         return self.__class__.get_codec().encode(self)
 
-
-class Address(BaseAddress, metaclass=ABCMeta):
-
     @staticmethod
-    def get_codec():
-        from ..lib.codecs import Base58Codec
-        return Base58Codec
+    @strictness
+    def from_string(string, strict=None):
+        from ..lib.codecs import CouldNotDecode
+
+        try:
+            return ClassicAddress.decode(string, strict=strict)
+        except CouldNotDecode:
+            try:
+                return SegWitAddress.decode(string, strict=strict)
+            except CouldNotDecode:
+                raise InvalidAddress
+
+    @classmethod
+    @strictness
+    def decode(cls, string, strict=None):
+        return cls.get_codec().decode(string, strict=strict)
 
     def __init__(self, hashed_data, mainnet=None):
-
-        super().__init__(hashed_data)
+        if len(hashed_data) != self.__class__.hash_length():
+            raise ValueError('Hashed data must be {}-bytes long, length: {}'.format(self.__class__.hash_length(),
+                                                                                    len(hashed_data)))
 
         if mainnet is None:
             mainnet = is_mainnet()
@@ -84,29 +85,37 @@ class Address(BaseAddress, metaclass=ABCMeta):
     def __eq__(self, other):
         return (self.network, self.hash) == (other.network, other.hash)
 
+    def get_script_type(self):
+        raise NotImplemented
 
-class SegWitAddress(BaseAddress, metaclass=ABCMeta):
+    def to_script(self):
+        return self.get_script_type()(self.hash)
 
-    @staticmethod
-    def get_codec():
+
+class ClassicAddress(Address, metaclass=ABCMeta):
+
+    @classmethod
+    def get_codec(cls):
+        from ..lib.codecs import Base58Codec
+        return Base58Codec
+
+
+class SegWitAddress(Address, metaclass=ABCMeta):
+
+    @classmethod
+    def get_codec(cls):
         from ..lib.codecs import Bech32Codec
         return Bech32Codec
 
     def __init__(self, hashed_data, version, mainnet=None):
-
-        super().__init__(hashed_data)
-
-        if mainnet is None:
-            mainnet = is_mainnet()
-        self.network = 'mainnet' if mainnet else 'testnet'
-        self.hash = hashed_data
+        super().__init__(hashed_data, mainnet)
         self.version = version
 
     def __eq__(self, other):
-        return (self.network, self.hash, self.version) == (other.network, other.hash, other.version)
+        return self.version == other.version and super().__eq__(other)
 
 
-class P2pkhAddress(Address):
+class P2pkhAddress(ClassicAddress):
 
     @classmethod
     def get_type(cls):
@@ -125,8 +134,12 @@ class P2pkhAddress(Address):
     def hash_length(cls):
         return 20
 
+    def get_script_type(self):
+        from .script import P2pkhScript
+        return P2pkhScript
 
-class P2shAddress(Address):
+
+class P2shAddress(ClassicAddress):
 
     @classmethod
     def get_type(cls):
@@ -143,6 +156,10 @@ class P2shAddress(Address):
     @classmethod
     def hash_length(cls):
         return 20
+
+    def get_script_type(self):
+        from .script import P2shScript
+        return P2shScript
 
 
 class P2wpkhAddress(SegWitAddress):
@@ -163,6 +180,10 @@ class P2wpkhAddress(SegWitAddress):
     def hash_length(cls):
         return 20
 
+    def get_script_type(self):
+        from .script import P2wpkhScript
+        return P2wpkhScript.get(self.version)
+
 
 class P2wshAddress(SegWitAddress):
 
@@ -171,15 +192,26 @@ class P2wshAddress(SegWitAddress):
         return 'p2wsh'
 
     @classmethod
-    def from_script(cls, script, mainnet=None):
-        from .script import P2wshScript
-        version = script.__class__.get_version()
+    def from_script(cls, script, mainnet=None, version=0):
+        from .script import P2wshScript, P2shScript, P2wpkhScript
+
+        if script.__class__ is P2shScript or isinstance(script, P2wpkhScript):
+            raise ValueError("Can't embed {} in P2WSH".format(script.__class__.__name__))
+
         if isinstance(script, P2wshScript):
+            script_version = script.__class__.get_version()
+            if script_version != version:
+                raise ValueError('Script version is {}, requested version is {}'.format(script_version, version))
             hashed_data = script.scripthash
         else:
             hashed_data = script.p2wsh_hash()
+
         return cls(hashed_data, version, mainnet)
 
     @classmethod
     def hash_length(cls):
         return 32
+
+    def get_script_type(self):
+        from .script import P2wshScript
+        return P2wshScript.get(self.version)

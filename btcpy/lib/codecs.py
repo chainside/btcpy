@@ -13,7 +13,7 @@ from abc import ABCMeta, abstractmethod
 from .base58 import b58encode_check, b58decode_check
 
 from .bech32 import decode, encode
-from ..setup import is_mainnet, net_name
+from ..setup import is_mainnet, net_name, strictness
 from ..constants import Constants
 from ..structs.address import Address, P2pkhAddress, P2shAddress, P2wpkhAddress, P2wshAddress
 
@@ -35,7 +35,7 @@ class Codec(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def decode(string: str, check_network=True) -> Address:
+    def decode(string: str, strict=None) -> Address:
         raise NotImplemented
 
     @classmethod
@@ -58,7 +58,9 @@ class Base58Codec(Codec):
         return b58encode_check(bytes(prefix + address.hash))
 
     @staticmethod
-    def decode(string, check_network=True):
+    @strictness
+    def decode(string, strict=None):
+
         try:
             addr_type, network = Constants.get('base58.prefixes')[string[0]]
         except KeyError:
@@ -68,7 +70,7 @@ class Base58Codec(Codec):
         if len(hashed_data) != Base58Codec.hash_len:
             raise CouldNotDecode('Data of the wrong length: {}, expected {}'.format(len(hashed_data),
                                                                                     Base58Codec.hash_len))
-        if check_network:
+        if strict:
             Base58Codec.check_network(network)
 
         if addr_type == 'p2pkh':
@@ -92,7 +94,9 @@ class Bech32Codec(Codec):
         return encode(prefix, address.version, address.hash)
 
     @staticmethod
-    def decode(string, check_network=True):
+    @strictness
+    def decode(string, strict=None):
+
         if not string:
             raise CouldNotDecode('Impossible to decode empty string')
 
@@ -112,7 +116,7 @@ class Bech32Codec(Codec):
         if not hashed_data:
             raise CouldNotDecode('Empty hash')
 
-        if check_network:
+        if strict:
             Bech32Codec.check_network(network)
 
         if addr_type == 'p2wpkh':

@@ -20,7 +20,7 @@
     "if_else_timelock": {
         "hex": "6352210384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff2103eb27fa93667e4f48e36071eb21c7229e5416ff0abd2886d59c8f314fb3cbee4052ae67037b9710b175210384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ffac68",
         "asm": "OP_IF OP_2 0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff 03eb27fa93667e4f48e36071eb21c7229e5416ff0abd2886d59c8f314fb3cbee40 OP_2 OP_CHECKMULTISIG OP_ELSE 7b9710 OP_CHECKLOCKTIMEVERIFY OP_DROP 0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff OP_CHECKSIG OP_ENDIF",
-        "code": "IfElseScript(MultisigScript(2, PublicKey.unhexlify(\"0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff\"), PublicKey.unhexlify(\"03eb27fa93667e4f48e36071eb21c7229e5416ff0abd2886d59c8f314fb3cbee40\"), 2), TimelockScript(Locktime(1087355), P2pkScript(PublicKey.unhexlify(\"0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff\"))))",
+        "code": "IfElseScript(MultisigScript(2, PublicKey.unhexlify(\"0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff\"), PublicKey.unhexlify(\"03eb27fa93667e4f48e36071eb21c7229e5416ff0abd2886d59c8f314fb3cbee40\"), 2), AbsoluteTimelockScript(Locktime(1087355), P2pkScript(PublicKey.unhexlify(\"0384478d41e71dc6c3f9edde0f928a47d1b724c05984ebfb4e7d0422e80abe95ff\"))))",
         "type": "if{ multisig }else{ [timelock] p2pk }"
     },
     "relativetimelock": {

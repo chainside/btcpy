@@ -23,6 +23,7 @@ from ..lib.parsing import Stream, Parser
 from ..setup import is_mainnet
 from .crypto import PrivateKey, PublicKey
 from ..constants import Constants
+from ..setup import strictness
 
 
 class ExtendedKey(HexSerializable, metaclass=ABCMeta):
@@ -36,7 +37,9 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         return cls(key, chaincode, 0, cls.master_parent_fingerprint, 0, hardened=True)
 
     @classmethod
-    def decode(cls, string, check_network=True):
+    @strictness
+    def decode(cls, string, strict=None):
+
         if string[0] == Constants.get('xkeys.prefixes')['mainnet']:
             mainnet = True
         elif string[0] == Constants.get('xkeys.prefixes')['testnet']:
@@ -44,10 +47,12 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         else:
             raise ValueError('Encoded key not recognised: {}'.format(string))
 
-        if check_network and mainnet != is_mainnet():
+        if strict and mainnet != is_mainnet():
             raise ValueError('Trying to decode {}mainnet key '
                              'in {}mainnet environment'.format('' if mainnet else 'non-',
                                                                'non-' if mainnet else ''))
+
+        cls._check_decode(string)
 
         decoded = b58decode_check(string)
         parser = Parser(bytearray(decoded))
@@ -80,6 +85,10 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     @abstractmethod
     def decode_key(keydata):
         raise NotImplemented
+
+    @staticmethod
+    def _check_decode(string):
+        pass
 
     @staticmethod
     @abstractmethod
@@ -140,7 +149,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
             data = self._serialize_key() + (index + cls.first_hardened_index).to_bytes(4, 'big')
         else:
             data = self._serialized_public() + index.to_bytes(4, 'big')
-        h = bytearray(hmac.new(self.chaincode, data, sha512).digest())
+        h = bytearray(hmac.new(bytes(self.chaincode), bytes(data), sha512).digest())
         left, right = int.from_bytes(h[:32], 'big'), h[32:]
         if left > cls.curve_order:
             raise ValueError('Left side of hmac generated number bigger than SECP256k1 curve order')
@@ -200,6 +209,11 @@ class ExtendedPrivateKey(ExtendedKey):
     def decode_key(keydata):
         return PrivateKey(keydata[1:])
 
+    @staticmethod
+    def _check_decode(string):
+        if string[:4] not in (Constants.get('xprv.prefix').values()):
+            raise ValueError('Non matching prefix: {}'.format(string[:4]))
+
     def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
         if not isinstance(key, PrivateKey):
             raise TypeError('ExtendedPrivateKey expects a PrivateKey')
@@ -250,6 +264,11 @@ class ExtendedPublicKey(ExtendedKey):
     @staticmethod
     def decode_key(keydata):
         return PublicKey(keydata)
+
+    @staticmethod
+    def _check_decode(string):
+        if string[:4] not in (Constants.get('xpub.prefix').values()):
+            raise ValueError('Non matching prefix: {}'.format(string[:4]))
 
     def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
         if not isinstance(key, PublicKey):

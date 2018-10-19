@@ -1,0 +1,130 @@
+[
+  {
+    "params": {
+      "seq": 10,
+      "blocks": false,
+      "disable": false
+    },
+    "sequence": 4194314
+  },
+  {
+    "params": {
+      "seq": 10,
+      "blocks": false,
+      "disable": true
+    },
+    "sequence": 2151677962
+  },
+  {
+    "params": {
+      "seq": 10,
+      "blocks": true,
+      "disable": false
+    },
+    "sequence": 10
+  },
+  {
+    "params": {
+      "seq": 10,
+      "blocks": true,
+      "disable": true
+    },
+    "sequence": 2147483658
+  },
+  {
+    "params": {
+      "seq": 100,
+      "blocks": false,
+      "disable": false
+    },
+    "sequence": 4194404
+  },
+  {
+    "params": {
+      "seq": 100,
+      "blocks": false,
+      "disable": true
+    },
+    "sequence": 2151678052
+  },
+  {
+    "params": {
+      "seq": 100,
+      "blocks": true,
+      "disable": false
+    },
+    "sequence": 100
+  },
+  {
+    "params": {
+      "seq": 100,
+      "blocks": true,
+      "disable": true
+    },
+    "sequence": 2147483748
+  },
+  {
+    "params": {
+      "seq": 63842,
+      "blocks": false,
+      "disable": false
+    },
+    "sequence": 4258146
+  },
+  {
+    "params": {
+      "seq": 63842,
+      "blocks": false,
+      "disable": true
+    },
+    "sequence": 2151741794
+  },
+  {
+    "params": {
+      "seq": 63842,
+      "blocks": true,
+      "disable": false
+    },
+    "sequence": 63842
+  },
+  {
+    "params": {
+      "seq": 63842,
+      "blocks": true,
+      "disable": true
+    },
+    "sequence": 2147547490
+  },
+  {
+    "params": {
+      "seq": 513,
+      "blocks": false,
+      "disable": false
+    },
+    "sequence": 4194817
+  },
+  {
+    "params": {
+      "seq": 513,
+      "blocks": false,
+      "disable": true
+    },
+    "sequence": 2151678465
+  },
+  {
+    "params": {
+      "seq": 513,
+      "blocks": true,
+      "disable": false
+    },
+    "sequence": 513
+  },
+  {
+    "params": {
+      "seq": 513,
+      "blocks": true,
+      "disable": true
+    },
+    "sequence": 2147484161
+  }
+]
