@@ -82,6 +82,9 @@ class Sequence(Immutable, HexSerializable):
     def is_max(self):
         return self.seq == self.MAX
 
+    def signals_rbf(self):
+        return self.seq <= self.MAX - 2
+
     @cached
     def serialize(self):
         return bytearray(self.seq.to_bytes(4, 'little'))
@@ -205,10 +208,13 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
         return result.serialize()
 
     def is_replaceable(self):
-        return not self.is_final()
+        return self.sequence.signals_rbf()
 
     def is_final(self):
-        return self.sequence.is_max()
+        return not self.is_replaceable()
+
+    def spend_same(self, other):
+        return (self.txid, self.txout) == (other.txid, other.txout)
 
     def is_standard(self, prev_script=None):
 
@@ -259,8 +265,13 @@ class CoinBaseTxIn(TxIn):
         super().__init__(CoinBaseTxIn.sentinel_txid, CoinBaseTxIn.sentinel_txout, script_sig, sequence, witness)
 
     def to_json(self):
-        return {'coinbase': self.script_sig.to_json(),
-                'sequence': str(self.sequence)}
+        result = {'coinbase': self.script_sig.to_json(),
+                  'sequence': str(self.sequence)}
+
+        if self.witness is not None:
+            result['txinwitness'] = self.witness.to_json()
+
+        return result
 
     def is_standard(self, *args, **kwargs):
         return True
