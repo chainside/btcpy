@@ -168,7 +168,7 @@ class StackData(Immutable, HexSerializable):
             if self.push_op[0] == 0:
                 return ''
             else:
-                return OpCodeConverter.from_int(self.push_op[0])
+                return '{:02x}'.format(self.push_op[0] - 80)
         if not self.data:
             return '00'
         return hexlify(self.data).decode()
