@@ -187,7 +187,7 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
                    Sequence(int(dic['sequence'])), witness=witness)
 
     def __init__(self, txid: str, txout: int, script_sig: ScriptSig,
-                 sequence: Sequence, witness=None) -> None:
+                 sequence: Sequence, witness=None):
         object.__setattr__(self, 'txid', txid)
         object.__setattr__(self, 'txout', txout)
         object.__setattr__(self, 'script_sig', script_sig)
@@ -295,7 +295,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
 
-    def __init__(self, value: int, n: int, script_pubkey: ScriptPubKey) -> None:
+    def __init__(self, value: int, n: int, script_pubkey: ScriptPubKey):
         object.__setattr__(self, 'value', value)
         object.__setattr__(self, 'n', n)
         object.__setattr__(self, 'script_pubkey', script_pubkey)
@@ -366,7 +366,7 @@ class Locktime(Immutable, HexSerializable):
             raise ValueError('Date is too far in the past')
         return cls(timestamp)
 
-    def __init__(self, n: int) -> None:
+    def __init__(self, n: int):
 
         if not 0 <= n <= self.MAX:
             raise LocktimeValueOutOfRange('Locktime out of range: {}'.format(n))
@@ -509,7 +509,7 @@ class Transaction(BaseTransaction, Immutable):
         return tx
 
     def __init__(self, version: int, ins: list, outs: list,
-                 locktime: Locktime, txid: str=None) -> None:
+                 locktime: Locktime, txid: str=None):
         object.__setattr__(self, 'version', version)
         object.__setattr__(self, 'ins', tuple(ins))
         object.__setattr__(self, 'outs', tuple(outs))
