@@ -153,12 +153,13 @@ class BlockParser(BlockHeaderParser):
 
 
 class TransactionParser(Parser):
+
     def __init__(self, bytes_):
         super().__init__(bytes_)
         self.segwit = False
         self.txins = 0
 
-    def _version(self):
+    def _version(self) -> int:
         return int.from_bytes(self >> 4, 'little')
 
     def _txin_data(self):
@@ -196,12 +197,13 @@ class TransactionParser(Parser):
         from ..structs.transaction import TxOut
         value = int.from_bytes(self >> 8, 'little')
         script = ScriptBuilder.identify(self >> self.parse_varint())
+
         return TxOut(value, n, script)
 
-    def _txouts(self):
+    def _txouts(self) -> list:
         return [self._txout(i) for i in range(self.parse_varint())]
 
-    def _witness(self):
+    def _witness(self) -> list:
         from ..structs.script import StackData
         if self.segwit:
             witnesses = []
