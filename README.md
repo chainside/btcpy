@@ -1,5 +1,5 @@
 <p>
-<img src="https://www.chainside.net/images/logo.png" alt="chainside" width="80"> 
+<img src="https://www.chainside.net/wp-content/themes/chainside2018/assets/favicon//favicon-192.png" alt="chainside" width="80"> 
 <br \><br \>
 developed with :heart: by <a href="https://www.chainside.net">chainside</a>
 </p>
