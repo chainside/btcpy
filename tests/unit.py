@@ -260,6 +260,8 @@ class TestTransaction(unittest.TestCase):
         for tx in json_txs:
             self.assertEqual(TransactionFactory.from_json(tx), TransactionFactory.unhexlify(tx['hex']))
             self.assertEqual(TransactionFactory.unhexlify(tx['hex']).to_json(), tx)
+            tx = TransactionFactory.unhexlify(tx['hex'])
+            self.assertEqual(tx.to_json(), TransactionFactory.from_json(tx.to_json()).to_json())
 
     def test_txid(self):
         for data in transactions:

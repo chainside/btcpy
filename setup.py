@@ -14,7 +14,7 @@ import sys
 from distutils.core import setup
 from setuptools import find_packages
 
-BTCPYVERSION = '0.6.3'
+BTCPYVERSION = '0.6.4'
 
 requirements = ['ecdsa==0.13']
 

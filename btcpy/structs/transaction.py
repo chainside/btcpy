@@ -15,10 +15,24 @@ from decimal import Decimal
 
 from ..constants import Constants
 from .sig import Sighash
-from .script import (ScriptBuilder, P2wpkhV0Script, P2wshV0Script, P2shScript, NulldataScript, ScriptSig,
-                     CoinBaseScriptSig, ScriptPubKey)
+from .script import (ScriptBuilder,
+                     P2wpkhV0Script,
+                     P2wshV0Script,
+                     P2shScript,
+                     NulldataScript,
+                     ScriptSig,
+                     CoinBaseScriptSig,
+                     ScriptPubKey)
 from ..lib.types import Immutable, Mutable, Jsonizable, HexSerializable, cached
 from ..lib.parsing import Parser, TransactionParser, Stream
+
+
+class SequenceValueOutOfRange(ValueError):
+    pass
+
+
+class LocktimeValueOutOfRange(ValueError):
+    pass
 
 
 # noinspection PyUnresolvedReferences
@@ -35,7 +49,7 @@ class Sequence(Immutable, HexSerializable):
     @classmethod
     def create(cls, seq, blocks=True, disable=False):
         if not 0 <= seq <= 0xffff:
-            raise ValueError('Sequence value out of range: {}'.format(seq))
+            raise SequenceValueOutOfRange('Sequence value out of range: {}'.format(seq))
         flags = 0
         if not blocks:
             flags |= 1 << Sequence.type_flag_position
@@ -45,7 +59,7 @@ class Sequence(Immutable, HexSerializable):
 
     def __init__(self, seq):
         if not 0 <= seq <= self.MAX:
-            raise ValueError('Sequence value out of range: {}'.format(seq))
+            raise SequenceValueOutOfRange('Sequence value out of range: {}'.format(seq))
         object.__setattr__(self, 'seq', seq)
 
     @property
@@ -76,6 +90,9 @@ class Sequence(Immutable, HexSerializable):
 
     def is_max(self):
         return self.seq == self.MAX
+
+    def signals_rbf(self):
+        return self.seq <= self.MAX - 2
 
     @cached
     def serialize(self):
@@ -157,7 +174,7 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
     """
 
     @classmethod
-    def from_json(cls, dic):
+    def from_json(cls, dic: dict):
 
         try:
             witness = Witness.from_json(dic['txinwitness'])
@@ -172,14 +189,16 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
                    ScriptSig(bytearray(unhexlify(dic['scriptSig']['hex']))),
                    Sequence(int(dic['sequence'])), witness=witness)
 
-    def __init__(self, txid: str, txout: int, script_sig: ScriptSig, sequence: Sequence, witness=None):
+    def __init__(self, txid: str, txout: int, script_sig: ScriptSig,
+                 sequence: Sequence, witness=None):
         object.__setattr__(self, 'txid', txid)
         object.__setattr__(self, 'txout', txout)
         object.__setattr__(self, 'script_sig', script_sig)
         object.__setattr__(self, 'sequence', sequence)
         object.__setattr__(self, 'witness', witness)
 
-    def to_json(self):
+    def to_json(self) -> dict:
+
         result = {'txid': self.txid,
                   'vout': self.txout,
                   'scriptSig': self.script_sig.to_json()}
@@ -200,10 +219,13 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
         return result.serialize()
 
     def is_replaceable(self):
-        return not self.is_final()
+        return self.sequence.signals_rbf()
 
     def is_final(self):
-        return self.sequence.is_max()
+        return not self.is_replaceable()
+
+    def spend_same(self, other):
+        return (self.txid, self.txout) == (other.txid, other.txout)
 
     def is_standard(self, prev_script=None):
 
@@ -254,8 +276,13 @@ class CoinBaseTxIn(TxIn):
         super().__init__(CoinBaseTxIn.sentinel_txid, CoinBaseTxIn.sentinel_txout, script_sig, sequence, witness)
 
     def to_json(self):
-        return {'coinbase': self.script_sig.to_json(),
-                'sequence': str(self.sequence)}
+        result = {'coinbase': self.script_sig.to_json(),
+                  'sequence': str(self.sequence)}
+
+        if self.witness is not None:
+            result['txinwitness'] = self.witness.to_json()
+
+        return result
 
     def is_standard(self, *args, **kwargs):
         return True
@@ -265,7 +292,8 @@ class CoinBaseTxIn(TxIn):
 class TxOut(Immutable, HexSerializable, Jsonizable):
 
     @classmethod
-    def from_json(cls, dic):
+    def from_json(cls, dic: dict):
+
         return cls(int(Decimal(dic['value']) * Constants.get('to_unit')),
                    dic['n'],
                    ScriptBuilder.identify(bytearray(unhexlify(dic['scriptPubKey']['hex']))))
@@ -341,10 +369,10 @@ class Locktime(Immutable, HexSerializable):
             raise ValueError('Date is too far in the past')
         return cls(timestamp)
 
-    def __init__(self, n):
+    def __init__(self, n: int):
 
         if not 0 <= n <= self.MAX:
-            raise ValueError('Locktime out of range: {}'.format(n))
+            raise LocktimeValueOutOfRange('Locktime out of range: {}'.format(n))
 
         object.__setattr__(self, 'n', n)
 
@@ -447,7 +475,7 @@ class Witness(Immutable, HexSerializable, Jsonizable):
 class BaseTransaction(HexSerializable, Jsonizable, metaclass=ABCMeta):
 
     @classmethod
-    def from_json(cls, tx_json):
+    def from_json(cls, tx_json: dict):
         tx = cls(version=tx_json['version'],
                  locktime=Locktime(tx_json['locktime']),
                  txid=tx_json['txid'],
@@ -456,7 +484,7 @@ class BaseTransaction(HexSerializable, Jsonizable, metaclass=ABCMeta):
         return tx
 
     @classmethod
-    def unhexlify(cls, string):
+    def unhexlify(cls, string: str):
         return cls.deserialize(bytearray(unhexlify(string)))
 
     @classmethod
@@ -477,13 +505,14 @@ class Transaction(BaseTransaction, Immutable):
     max_weight = 400000
 
     @classmethod
-    def from_json(cls, tx_json):
+    def from_json(cls, tx_json: dict):
         tx = super().from_json(tx_json)
         if any(txin.witness is not None for txin in tx.ins):
             raise TypeError('Trying to load classic transaction from SegWit transaction json')
         return tx
 
-    def __init__(self, version, ins, outs, locktime, txid=None):
+    def __init__(self, version: int, ins: list, outs: list,
+                 locktime: Locktime, txid: str=None):
         object.__setattr__(self, 'version', version)
         object.__setattr__(self, 'ins', tuple(ins))
         object.__setattr__(self, 'outs', tuple(outs))

@@ -1,5 +1,5 @@
 <p>
-<img src="https://www.chainside.net/images/logo.png" alt="chainside" width="80"> 
+<img src="https://www.chainside.net/wp-content/themes/chainside2018/assets/favicon//favicon-192.png" alt="chainside" width="80"> 
 <br \><br \>
 developed with :heart: by <a href="https://www.chainside.net">chainside</a>
 </p>
@@ -660,8 +660,8 @@ Additionally, the following solvers are available and they take the following in
 | `MultisigSolver` | an arbitrary number of `PrivateKey`s                                                                 | `MultisigScript`  |
 | `IfElseSolver`   | an object of type `Branch`. This is an enum and its values are `Branch.IF` and `Branch.ELSE`, these are used to specify whether we are spending the `if` or `else` branch of the script. The second parameter is a `Solver` for the script inside the desired branch. | `IfElseScript` |
 | `TimelockSolver` | a `Solver` of the inner timelocked script | `AbsoluteTimelockScript`, `RelativeTimelockScript` |
-| `RelativeTimelockSolver` | a `Solver` of the inner timelocked script, with absolute timelocks | `RelativeTimelockScript` |
-| `AbsoluteTimelockSolver` | a `Solver` of the inner timelocked script, with relative timelocks | `AbsoluteTimelockScript` |
+| `RelativeTimelockSolver` | a `Solver` of the inner timelocked script, with relative timelocks | `RelativeTimelockScript` |
+| `AbsoluteTimelockSolver` | a `Solver` of the inner timelocked script, with absolute timelocks | `AbsoluteTimelockScript` |
 | `HashlockSolver` | the preimage needed to spend the script, as a `bytearray`, and a `Solver` for the hashlocked script | `Hashlock256Script`, `Hashlock160Script` |
 
 
