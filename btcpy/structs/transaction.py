@@ -762,7 +762,7 @@ class SegWitTransaction(BaseTransaction, Immutable):
     @classmethod
     def from_json(cls, tx_json):
         tx = super().from_json(tx_json)
-        if any(txin.witness is None for txin in tx.ins):
+        if all(txin.witness is None for txin in tx.ins):
             raise TypeError('Trying to load segwit transaction from non-segwit transaction json')
         return tx
 
@@ -1027,7 +1027,7 @@ class TransactionFactory(object):
 
     @classmethod
     def from_json(cls, tx_json, mutable=False):
-        segwit = all('txinwitness' in txin for txin in tx_json['vin'])
+        segwit = any('txinwitness' in txin for txin in tx_json['vin'])
         if segwit:
             return cls._get_class(segwit=True, mutable=mutable).from_json(tx_json)
         else:
