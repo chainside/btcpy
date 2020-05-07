@@ -770,7 +770,11 @@ class SegWitTransaction(BaseTransaction, Immutable):
         object.__setattr__(self, 'transaction', Transaction(version, ins, outs, locktime, txid))
 
     def __getattr__(self, item):
-        return getattr(self.transaction, item)
+        if 'transaction' not in vars(self):
+            raise AttributeError("'{}' object has no attribute '{}'".format(type(self).__name__, 
+                                                                            item))
+        else:
+            return getattr(self.transaction, item)
 
     @cached
     def serialize(self):
