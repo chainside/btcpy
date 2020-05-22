@@ -11,6 +11,7 @@
 
 import hmac
 from hashlib import sha512
+from itertools import chain
 from ..lib.base58 import b58decode_check, b58encode_check
 from ecdsa import VerifyingKey
 from ecdsa.ellipticcurve import INFINITY
@@ -27,34 +28,30 @@ from ..setup import strictness
 
 
 class ExtendedKey(HexSerializable, metaclass=ABCMeta):
-
-    master_parent_fingerprint = bytearray([0]*4)
+    master_parent_fingerprint = bytearray([0] * 4)
     first_hardened_index = 1 << 31
     curve_order = SECP256k1.order
 
     @classmethod
-    def master(cls, key, chaincode):
-        return cls(key, chaincode, 0, cls.master_parent_fingerprint, 0, hardened=True)
+    def master(cls, key, chaincode, version):
+        return cls(key, chaincode, 0, cls.master_parent_fingerprint, 0, version, hardened=True)
 
     @classmethod
     @strictness
     def decode(cls, string, strict=None):
-
-        if string[0] == Constants.get('xkeys.prefixes')['mainnet']:
-            mainnet = True
-        elif string[0] == Constants.get('xkeys.prefixes')['testnet']:
-            mainnet = False
-        else:
+        decoded = b58decode_check(string)
+        version = decoded[0:4]
+        try:
+            data = Constants.get('xkeys.prefixes')[version]
+        except KeyError:
             raise ValueError('Encoded key not recognised: {}'.format(string))
+        mainnet = data['network'] == 'mainnet'
 
         if strict and mainnet != is_mainnet():
             raise ValueError('Trying to decode {}mainnet key '
                              'in {}mainnet environment'.format('' if mainnet else 'non-',
                                                                'non-' if mainnet else ''))
 
-        cls._check_decode(string)
-
-        decoded = b58decode_check(string)
         parser = Parser(bytearray(decoded))
         parser >> 4
         depth = int.from_bytes(parser >> 1, 'big')
@@ -70,32 +67,23 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         chaincode = parser >> 32
         keydata = parser >> 33
 
-        if string[1:4] == 'prv':
+        if data['type'] == 'prv':
             subclass = ExtendedPrivateKey
-        elif string[1:4] == 'pub':
+        elif data['type'] == 'pub':
             subclass = ExtendedPublicKey
         else:
             raise ValueError('Encoded key not recognised: {}'.format(string))
-
+        if cls != ExtendedKey and cls != subclass:
+            raise ValueError('Trying to decode {} key on {} subclass'.format(data['type'], subclass))
         key = subclass.decode_key(keydata)
-
-        return subclass(key, chaincode, depth, fingerprint, index, hardened)
+        return subclass(key, chaincode, depth, fingerprint, index, version, hardened)
 
     @staticmethod
     @abstractmethod
     def decode_key(keydata):
         raise NotImplemented
 
-    @staticmethod
-    def _check_decode(string):
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def get_version(mainnet=None):
-        raise NotImplemented
-
-    def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
+    def __init__(self, key, chaincode, depth, pfing, index, version, hardened=False):
         if not 0 <= depth <= 255:
             raise ValueError('Depth must be between 0 and 255')
         self.key = key
@@ -104,6 +92,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
         self.parent_fingerprint = pfing
         self.index = index
         self.hardened = hardened
+        self.version = version
 
     def derive(self, path):
         """
@@ -166,7 +155,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
     def serialize(self, mainnet=None):
         cls = self.__class__
         result = Stream()
-        result << cls.get_version(mainnet)
+        result << self.version
         result << self.depth.to_bytes(1, 'big')
         result << self.parent_fingerprint
         if self.hardened:
@@ -179,7 +168,7 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
 
     def __str__(self):
         return 'version: {}\ndepth: {}\nparent fp: {}\n' \
-               'index: {}\nchaincode: {}\nkey: {}\nhardened: {}'.format(self.__class__.get_version(),
+               'index: {}\nchaincode: {}\nkey: {}\nhardened: {}'.format(self.version,
                                                                         self.depth,
                                                                         self.parent_fingerprint,
                                                                         self.index,
@@ -193,31 +182,19 @@ class ExtendedKey(HexSerializable, metaclass=ABCMeta):
                     self.depth == other.depth,
                     self.parent_fingerprint == other.parent_fingerprint,
                     self.index == other.index,
+                    self.version == other.version,
                     self.hardened == other.hardened])
 
 
 class ExtendedPrivateKey(ExtendedKey):
-
-    @staticmethod
-    def get_version(mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
-        # using net_name here would ignore the mainnet=None flag
-        return Constants.get('xprv.version')['mainnet' if mainnet else 'testnet']
-
     @staticmethod
     def decode_key(keydata):
         return PrivateKey(keydata[1:])
 
-    @staticmethod
-    def _check_decode(string):
-        if string[:4] not in (Constants.get('xprv.prefix').values()):
-            raise ValueError('Non matching prefix: {}'.format(string[:4]))
-
-    def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
+    def __init__(self, key, chaincode, depth, pfing, index, version, hardened=False):
         if not isinstance(key, PrivateKey):
             raise TypeError('ExtendedPrivateKey expects a PrivateKey')
-        super().__init__(key, chaincode, depth, pfing, index, hardened)
+        super().__init__(key, chaincode, depth, pfing, index, version, hardened)
 
     def __int__(self):
         return int.from_bytes(self.key.key, 'big')
@@ -232,6 +209,7 @@ class ExtendedPrivateKey(ExtendedKey):
                                   self.depth + 1,
                                   self.get_fingerprint(),
                                   index,
+                                  self.version,
                                   hardened)
 
     def get_fingerprint(self):
@@ -244,36 +222,27 @@ class ExtendedPrivateKey(ExtendedKey):
         return self.pub()._serialize_key()
 
     def pub(self):
+        key_type = Constants.get('xkeys.prefixes')[self.version]['prefix']
+        pub_version = Constants.get('xkeys.versions')['{}pub'.format(key_type)]
         return ExtendedPublicKey(self.key.pub(),
                                  self.chaincode,
                                  self.depth,
                                  self.parent_fingerprint,
                                  self.index,
+                                 pub_version,
                                  self.hardened)
 
 
 class ExtendedPublicKey(ExtendedKey):
 
     @staticmethod
-    def get_version(mainnet=None):
-        if mainnet is None:
-            mainnet = is_mainnet()
-        # using net_name here would ignore the mainnet=None flag
-        return Constants.get('xpub.version')['mainnet' if mainnet else 'testnet']
-
-    @staticmethod
     def decode_key(keydata):
         return PublicKey(keydata)
 
-    @staticmethod
-    def _check_decode(string):
-        if string[:4] not in (Constants.get('xpub.prefix').values()):
-            raise ValueError('Non matching prefix: {}'.format(string[:4]))
-
-    def __init__(self, key, chaincode, depth, pfing, index, hardened=False):
+    def __init__(self, key, chaincode, depth, pfing, index, version, hardened=False):
         if not isinstance(key, PublicKey):
             raise TypeError('ExtendedPublicKey expects a PublicKey')
-        super().__init__(key.compress(), chaincode, depth, pfing, index, hardened)
+        super().__init__(key.compress(), chaincode, depth, pfing, index, version, hardened)
 
     def __int__(self):
         return int.from_bytes(self.key.key, 'big')
@@ -287,7 +256,8 @@ class ExtendedPublicKey(ExtendedKey):
                  + VerifyingKey.from_string(self.key.uncompressed[1:], curve=SECP256k1).pubkey.point)
         if point == INFINITY:
             raise ValueError('Computed point equals INFINITY')
-        return ExtendedPublicKey(PublicKey.from_point(point), right, self.depth+1, self.get_fingerprint(), index, False)
+        return ExtendedPublicKey(PublicKey.from_point(point), right, self.depth + 1, self.get_fingerprint(), index,
+                                 self.version, False)
 
     def get_hash(self, index, hardened=False):
         if hardened:

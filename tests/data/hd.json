@@ -68,5 +68,28 @@
         "path": "m/0'",
         "pub": "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y",
         "prv": "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L"
+    },
+    {
+        "path": "m",
+        "pub": "zpub6jftahH18ngZxLmXaKw3GSZzZsszmt9WqedkyZdezFtWRFBZqsQH5hyUmb4pCEeZGmVfQuP5bedXTB8is6fTv19U1GQRyQUKQGUTzyHACMF",
+        "prv": "zprvAWgYBBk7JR8Gjrh4UJQ2uJdG1r3WNRRfURiABBE3RvMXYSrRJL62XuezvGdPvG6GFBZduosCc1YP5wixPox7zhZLfiUm8aunE96BBa4Kei5"
+
+    },
+    {
+        "path": "m/84'/0'/0'",
+        "pub": "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs",
+        "prv": "zprvAdG4iTXWBoARxkkzNpNh8r6Qag3irQB8PzEMkAFeTRXxHpbF9z4QgEvBRmfvqWvGp42t42nvgGpNgYSJA9iefm1yYNZKEm7z6qUWCroSQnE"
+
+    },
+    {
+        "path": "m",
+        "pub": "ypub6QqdH2c5z7967ogoqgbD4JeFPmHKhuebp1H8fhzmrK31ZjFqmg4qg93xTWtSzETX5isbBSRSPgBNGrwYE2aHDFMqVim4qVBHmJoefLZduf9",
+        "prv": "yprvABrGsX5C9januKcLjf4ChAhWqjSqJSvkSnMXsKbAHyW2gvvhE8kb8LjUcE8dUP7fjvrvPB6gPP5baYdsautCeoJwHxncfE26KLYwNc65u29"
+
+    },
+    {
+        "path": "m/49'/0'/0'/0",
+        "pub": "ypub6ZtnK8aTMxuKkCbteWCBn9vo4D7YXDhCNUGAEqPSY3r1v1D423MxsoBJHBMzVBY4QNEWHe4RtDCKEkhCNn1MxGmdNd76T1SGdf9KZ46gtso",
+        "prv": "yprvALuRud3ZXbM2XiXRYUfBR1z4WBH47kyM1FLZSSypyiK33CsuUW3iKzrpRufVXR1uKiw6TLt2QEGHupDfwGscoAr23dSjYVVuEozTuCqzjUh"
     }
 ]
