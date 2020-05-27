@@ -69,6 +69,9 @@ class Sequence(Immutable, HexSerializable):
     def __str__(self):
         return str(self.seq)
 
+    def __int__(self):
+        return int(self.seq)
+
     def __repr__(self):
         return 'Sequence({})'.format(self.seq)
 
@@ -202,7 +205,7 @@ class TxIn(Immutable, HexSerializable, Jsonizable):
 
         if self.witness is not None:
             result['txinwitness'] = self.witness.to_json()
-        result['sequence'] = str(self.sequence)
+        result['sequence'] = int(self.sequence)
         return result
 
     @cached
@@ -318,7 +321,7 @@ class TxOut(Immutable, HexSerializable, Jsonizable):
         pass
 
     def to_json(self):
-        return {'value': str(Decimal(self.value) * Constants.get('from_unit')),
+        return {'value': float(Decimal(self.value) * Constants.get('from_unit')),
                 'n': self.n,
                 'scriptPubKey': self.script_pubkey.to_json()}
 
