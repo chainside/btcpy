@@ -418,6 +418,10 @@ class TestKeys(unittest.TestCase):
                 priv.public_compressed = False
             self.assertEqual(priv.to_wif(w['mainnet']), w['wif'])
 
+    def test_private_key_generation(self):
+        key = PrivateKey.generate(32)
+        self.assertEqual(len(key), 64)
+
 
 class TestPubkey(unittest.TestCase):
 
