@@ -9,6 +9,7 @@
 # propagated, or distributed except according to the terms contained in the
 # LICENSE.md file.
 
+import secrets
 from binascii import unhexlify
 from ..lib.base58 import b58decode_check, b58encode_check
 from hashlib import sha256
@@ -60,6 +61,13 @@ class PrivateKey(Key):
     @staticmethod
     def unhexlify(hexa):
         return PrivateKey(bytearray(unhexlify(hexa)))
+
+    @staticmethod
+    def generate():
+        """
+        Generate a random text string, in hexadecimal with 32 random bytes.
+        """
+        return PrivateKey(bytearray(secrets.token_hex(nbytes=32), encoding='ascii'))
 
     def __init__(self, priv, public_compressed=True):
         self.key = priv
