@@ -63,7 +63,7 @@ class PrivateKey(Key):
         return PrivateKey(bytearray(unhexlify(hexa)))
 
     @staticmethod
-    def generate(nbytes=32):
+    def generate():
         """
         Generate  a random text string, in hexadecimal with nbytes random bytes. Its length is thus 2 * nbytes.
         Args:
@@ -71,7 +71,7 @@ class PrivateKey(Key):
         Returns:
             A random hexadecimal string of length 2 * nbytes.
         """
-        return secrets.token_hex(nbytes)
+        return PrivateKey(bytearray(secrets.token_hex(nbytes=32), encoding='ascii'))
 
     def __init__(self, priv, public_compressed=True):
         self.key = priv

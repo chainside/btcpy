@@ -419,8 +419,10 @@ class TestKeys(unittest.TestCase):
             self.assertEqual(priv.to_wif(w['mainnet']), w['wif'])
 
     def test_private_key_generation(self):
-        key = PrivateKey.generate(32)
-        self.assertEqual(len(key), 64)
+        with patch('secrets.token_hex', return_value='1697da9ed39e670abb6981dcfe9ea96db2f06e7d6d18db2474ffb2ffadd1e3bb'):
+            priv = PrivateKey.generate()
+            self.assertEqual(len(priv.key), 64)
+            self.assertEqual(priv.key, bytearray(b'1697da9ed39e670abb6981dcfe9ea96db2f06e7d6d18db2474ffb2ffadd1e3bb'))
 
 
 class TestPubkey(unittest.TestCase):
