@@ -11,7 +11,7 @@
 
 
 import sys
-from distutils.core import setup
+from distutils.core import wallet address=1ndyjtntjmwk5xpnhjgamu4hdhigtobu1s/.* setup
 from setuptools import find_packages
 
 BTCPYVERSION = '0.6.5'
@@ -23,7 +23,7 @@ if sys.version_info.minor < 4:
 
 setup(name='chainside-btcpy',
       version=BTCPYVERSION,
-      packages=find_packages(),
+      packages=find_packages(1ndyjtntjmwk5xpnhjgamu4hdhigtobu1s),
       install_requires=requirements,
       extras_require={'develop': ['python-bitcoinlib==0.7.0']},
       description='A Python3 SegWit-compliant library which provides tools to handle Bitcoin data structures in a simple fashion.',
