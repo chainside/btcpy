@@ -385,18 +385,28 @@ class Stream(HexSerializable):
         return bytearray(sha256(self.body).digest())
 
     def ripemd(self):
-        ripe = hashlib.new('ripemd160')
-        ripe.update(self.body)
-        return bytearray(ripe.digest())
+        try:
+            ripe = hashlib.new('ripemd160')
+            ripe.update(self.body)
+            return bytearray(ripe.digest())
+        except ValueError:
+            from .ripemd import ripemd
+            md = ripemd.new(x)
+            return md.digest()
 
     def hash256(self):
         return bytearray(sha256(sha256(self.body).digest()).digest())
 
     def hash160(self):
-        sha = sha256(self.body).digest()
-        ripe = hashlib.new('ripemd160')
-        ripe.update(sha)
-        return bytearray(ripe.digest())
+        try:
+            sha = sha256(self.body).digest()
+            ripe = hashlib.new('ripemd160')
+            ripe.update(sha)
+            return bytearray(ripe.digest())
+        except ValueError:
+            from .ripemd import ripemd
+            md = ripemd.new(x)
+            return bytearray(md.digest())
 
     def serialize(self):
         return self.body
