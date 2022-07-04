@@ -198,9 +198,14 @@ class PublicKey(BasePublicKey):
         import hashlib
         original = self.uncompressed if self.type == 'uncompressed' else self.compressed
         sha = hashlib.sha256(original).digest()
-        ripe = hashlib.new('ripemd160')
-        ripe.update(sha)
-        return bytearray(ripe.digest())
+        try:
+            ripe = hashlib.new('ripemd160')
+            ripe.update(sha)
+            return bytearray(ripe.digest())
+        except ValueError:
+            from ..lib.ripemd import ripemd
+            ripe = ripemd.new(sha)
+            return bytearray(ripe.digest())
 
     def compress(self):
         if self.type != 'uncompressed':
